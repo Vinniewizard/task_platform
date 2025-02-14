@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4>Invite Friends & Earn Rewards</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="mb-3">Share this link with your friends and earn rewards when they join!</p>
+                    <div class="input-group">
+                        <input type="text" class="form-control" value="{{ invite_url }}" id="inviteLink" readonly>
+                        <div class="input-group-append">
+                            <button class="btn btn-success" onclick="copyLink()">Copy Link</button>
+                        </div>
+                    </div>
+                    <p class="mt-3 text-muted">Refer more friends and increase your earnings!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function copyLink() {
+        var copyText = document.getElementById("inviteLink");
+        copyText.select();
+        navigator.clipboard.writeText(copyText.value).then(() => {
+            alert("Invitation link copied to clipboard!");
+        }).catch(err => {
+            console.error("Failed to copy:", err);
+        });
+    }
+</script>
+{% endblock %}

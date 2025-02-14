@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+{% if not user.is_authenticated %}
+  <!-- Visitor (Not logged in) -->
+  <div class="hero-section text-center py-5" style="background: url('{% static 'images/hero-bg.jpg' %}') no-repeat center; background-size: cover;">
+    <div class="container text-white">
+      <h2 class="display-4">Welcome to Vintech-Technologies</h2>
+      <p class="lead">Earn money online with flexible plans and real-time rewards!</p>
+      <a href="{% url 'register' %}" class="btn btn-lg btn-primary mr-2">Join Now</a>
+      <a href="{% url 'login' %}" class="btn btn-lg btn-secondary">Login</a>
+    </div>
+  </div>
+  <div class="container my-5">
+    <h3 class="text-center">Please register or login to start earning.</h3>
+  </div>
+
+{% else %}
+  {% if not user.userprofile.plan %}
+    <!-- Logged in but no active plan -->
+    <div class="hero-section text-center py-5" style="background: url('{% static 'images/hero-bg.jpg' %}') no-repeat center; background-size: cover;">
+      <div class="container text-white">
+        <h2 class="display-4">Welcome, {{ user.username }}!</h2>
+        <p class="lead">To start earning, please choose a plan below.</p>
+        <a href="{% url 'choose_plan' %}" class="btn btn-lg btn-primary">Choose Your Plan</a>
+      </div>
+    </div>
+    <div class="container my-5">
+      <p class="text-center">After choosing your plan, you'll have full access to our earning features.</p>
+    </div>
+  
+  {% else %}
+    <!-- Logged in and has an active plan -->
+    <div class="hero-section text-center py-5" style="background: url('{% static 'images/hero-bg.jpg' %}') no-repeat center; background-size: cover;">
+      <div class="container text-pink">
+       <b> <h2 class="display-4">Welcome back, {{ user.username }}!</h2></b>
+        <p class="lead">Your earning journey starts here!</p>
+      </div>
+    </div>
+
+    <!-- Summary Info Box -->
+    <div class="container my-4">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="card-title">Hello, {{ user.username }}!</h4>
+          <p class="card-text">
+            Balance: <strong>$ {{ user.userprofile.balance }}</strong> &nbsp; | &nbsp;
+            Plan: <strong>{{ user.userprofile.plan.name }}</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature Cards Section -->
+    <div class="container my-5">
+      <div class="row mb-4">
+        <!-- Feature Cards: Deposit, Withdraw, Tasks, Dashboard, Support, Logout -->
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title">Deposit</h5>
+              <p class="card-text">Add funds securely.</p>
+              <a href="{% url 'deposit' %}" class="btn btn-success">Deposit</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title">Withdraw</h5>
+              <p class="card-text">Min. $500.</p>
+              <a href="{% url 'withdrawal' %}" class="btn btn-danger">Withdraw</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title">Tasks</h5>
+              <p class="card-text">Earn via mining/ads.</p>
+              <a href="{% url 'perform_task' %}" class="btn btn-info">Tasks</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title">Dashboard</h5>
+              <p class="card-text">Track your earnings.</p>
+              <a href="{% url 'home' %}" class="btn btn-secondary">Dashboard</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title">Support</h5>
+              <p class="card-text">Get help when needed.</p>
+              <a href="{% url 'contact_support' %}" class="btn btn-warning">Support</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title">Logout</h5>
+              <p class="card-text">Sign out securely.</p>
+              <a href="{% url 'logout' %}" class="btn btn-dark">Logout</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+      <!-- Invitation Section -->
+      <div class="row my-5">
+        <div class="col text-center">
+          <h3>Invite Friends & Earn Rewards</h3>
+          <p class="lead">Share your unique invitation link and earn bonuses when your friends join and upgrade.</p>
+          <a href="{% url 'invite' %}" class="btn btn-primary btn-lg">Get Your Invitation Link</a>
+        </div>
+      </div>
+      
+      <!-- Methods of Earnings Section -->
+      <div class="row my-5">
+        <div class="col">
+          <h3 class="text-center">How You Earn</h3>
+          <p class="lead text-center">Discover various ways to boost your earnings:</p>
+          <div class="row">
+            <div class="col-md-4 mb-4">
+              <div class="card shadow-sm">
+                <div class="card-body">
+                  <h5 class="card-title">Mining</h5>
+                  <p class="card-text">Complete tasks to earn a fixed reward per mining task.</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4 mb-4">
+              <div class="card shadow-sm">
+                <div class="card-body">
+                  <h5 class="card-title">Watching Ads</h5>
+                  <p class="card-text">Activate and watch ads for bonus rewards within daily limits.</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4 mb-4">
+              <div class="card shadow-sm">
+                <div class="card-body">
+                  <h5 class="card-title">Referral Bonus</h5>
+                  <p class="card-text">Invite friends using your unique link to earn extra rewards.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Optional Testimonials/Info Section -->
+      <div class="row my-5">
+        <div class="col">
+          <h3 class="text-center">Why Choose Vintech-Technologies?</h3>
+          <p class="lead text-center">
+            Enjoy flexible earning opportunities through mining, ad-watching, and referrals. Upgrade your plan, invite friends, and watch your income grow.
+          </p>
+        </div>
+      </div>
+    </div>
+  
+<div class="container">
+    <h2 class="text-center">Welcome to Our Platform!</h2>
+
+    <!-- Recent Withdrawals Ticker -->
+    <div id="withdrawal-box">
+        <p id="withdrawal-text">Loading recent withdrawals...</p>
+    </div>
+</div>
+
+<!-- JavaScript to Fetch Withdrawals Randomly -->
+<script>
+    function fetchWithdrawal() {
+        fetch("{% url 'get_random_withdrawal' %}")
+        .then(response => response.json())
+        .then(data => {
+            if (!data.error) {
+                document.getElementById("withdrawal-text").innerHTML =
+                    `💸 <b>${data.name}</b> just withdrew <b>${data.amount}</b> via <b>${data.method}</b>! 🚀`;
+            }
+        });
+
+        // Random interval between 2 to 10 seconds
+        let nextUpdate = Math.floor(Math.random() * (10000 - 2000 + 1)) + 2000;
+        setTimeout(fetchWithdrawal, nextUpdate);
+    }
+
+    // Start fetching withdrawals when page loads
+    document.addEventListener("DOMContentLoaded", fetchWithdrawal);
+</script>
+
+<!-- CSS to Style Withdrawals Box -->
+<style>
+    #withdrawal-box {
+        max-width: 500px;
+        margin: 20px auto;
+        padding: 10px;
+        background: #fffae6;
+        border: 1px solid #ffd700;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 16px;
+        font-weight: bold;
+        color: #d98300;
+        animation: fadeIn 1s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+</style>
+  {% endif %}
+{% endif %}
+
+{% endblock %}

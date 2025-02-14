@@ -1,0 +1,10 @@
+<h3>Withdrawal Requests</h3>
+<ul>
+    {% for withdrawal in user.withdrawal_set.all %}
+        <li>{{ withdrawal.amount }} - {{ withdrawal.status }}</li>
+    {% empty %}
+        <p>No withdrawal requests.</p>
+    {% endfor %}
+</ul>
+
+<p><a href="{% url 'request_withdrawal' %}">Request Withdrawal</a></p>

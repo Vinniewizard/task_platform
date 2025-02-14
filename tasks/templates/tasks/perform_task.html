@@ -1,0 +1,175 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Page</title>
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
+  <!-- CSRF Token (Hidden Form for JavaScript Access) -->
+  <form style="display:none;">
+    {% csrf_token %}
+  </form>
+
+  <style>
+    body {
+      text-align: center;
+      padding-top: 20px;
+    }
+    .task-container {
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    }
+    .countdown {
+      font-size: 20px;
+      font-weight: bold;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="my-3">Task Page</h1>
+
+    <div class="task-container">
+      <h2>Your Balance: $ <span id="balance-display">{{ user.userprofile.balance }}</span></h2>
+
+      <!-- Button for mining task -->
+      <button id="mine-btn" class="btn btn-primary">Mine Now</button>
+      <p id="countdownDisplay" class="countdown mt-2"></p>
+      <br/>
+
+      <!-- Button for activating ads -->
+      <button id="activate-ads-btn" class="btn btn-warning">Activate Ads (Pay 200)</button>
+      <br/><br/>
+
+      <!-- Button for watching an ad -->
+      <button id="watch-ad-btn" class="btn btn-success">Watch Ad (Earn 20)</button>
+      <br/><br/>
+
+      <div id="status-message" style="color: red; font-weight: bold;"></div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+  <script>
+    function getCSRFToken() {
+      return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+
+    function updateBalance(newBalance) {
+      document.getElementById("balance-display").innerText = newBalance;
+    }
+
+    document.getElementById("mine-btn").addEventListener("click", function() {
+      var button = this;
+      var countdownDisplay = document.getElementById("countdownDisplay");
+      var statusMessage = document.getElementById("status-message");
+
+      button.disabled = true;
+      statusMessage.innerText = "Processing mining task...";
+
+      fetch("/tasks/mine/", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCSRFToken(),
+          "Content-Type": "application/json"
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("Mining successful! You earned $ " + data.reward);
+          updateBalance(data.balance);
+          
+          // Start 10-second countdown only if mining is successful
+          let seconds = 10;
+          countdownDisplay.textContent = "Please wait " + seconds + " seconds before mining again...";
+          let countdownInterval = setInterval(() => {
+            seconds--;
+            countdownDisplay.textContent = "Please wait " + seconds + " seconds before mining again...";
+            if (seconds <= 0) {
+              clearInterval(countdownInterval);
+              countdownDisplay.textContent = "";
+              button.disabled = false;
+            }
+          }, 1000);
+        } 
+        else if (data.message === "Daily mining limit reached") {
+          statusMessage.innerText = "Daily mining limit reached. Try again tomorrow.";
+          button.disabled = false;  // Re-enable button immediately
+        } 
+        else {
+          statusMessage.innerText = data.message || "An error occurred.";
+          button.disabled = false;  // Re-enable button immediately
+        }
+      })
+      .catch(error => {
+        console.error("Error during mining:", error);
+        statusMessage.innerText = "Error during mining.";
+        button.disabled = false;
+      });
+    });
+
+    document.getElementById("activate-ads-btn").addEventListener("click", function() {
+      document.getElementById("status-message").innerText = "Activating ads...";
+      fetch("/tasks/activate_ads/", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCSRFToken(),
+          "Content-Type": "application/json"
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("Ads activated successfully!");
+          updateBalance(data.balance);
+          document.getElementById("status-message").innerText = "";
+        } else {
+          document.getElementById("status-message").innerText = data.message || data.error;
+        }
+      })
+      .catch(error => {
+        console.error("Error activating ads:", error);
+        document.getElementById("status-message").innerText = "Error activating ads.";
+      });
+    });
+
+    document.getElementById("watch-ad-btn").addEventListener("click", function() {
+      document.getElementById("status-message").innerText = "Watching ad... Please wait 10 seconds.";
+      fetch("/tasks/watch_ad/", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCSRFToken(),
+          "Content-Type": "application/json"
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("Ad watched successfully! You earned $ " + data.reward);
+          updateBalance(data.balance);
+          document.getElementById("status-message").innerText = "";
+        } else {
+          document.getElementById("status-message").innerText = data.message || data.error;
+        }
+      })
+      .catch(error => {
+        console.error("Error watching ad:", error);
+        document.getElementById("status-message").innerText = "Error watching ad.";
+      });
+    });
+  </script>
+</body>
+</html>

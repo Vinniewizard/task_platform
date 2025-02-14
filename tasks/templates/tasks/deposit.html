@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5">
+  <h2>Deposit Money</h2>
+  <p>Please send your payment to the account number: <strong>0729168968</strong></p>
+  <p>Then select your payment method, enter the deposited amount, and provide your transaction reference (if available).</p>
+  <form method="POST">
+      {% csrf_token %}
+      <div class="form-group">
+          <label for="payment_method">Payment Method:</label>
+          <select name="payment_method" id="payment_method" class="form-control" required>
+             <option value="">-- Choose Payment Method --</option>
+             <option value="binance">Binance</option>
+             <option value="mpesa">Safaricom M-Pesa</option>
+             <option value="airtel">Airtel Money</option>
+          </select>
+      </div>
+      <div class="form-group">
+          <label for="amount">Amount:</label>
+          <input type="number" step="0.01" name="amount" id="amount" class="form-control" required>
+      </div>
+      <div class="form-group">
+          <label for="reference">Transaction Reference (Optional):</label>
+          <input type="text" name="reference" id="reference" class="form-control">
+      </div>
+      <button type="submit" class="btn btn-success">Submit Deposit Request</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5">
+  <h2>OTP Verification</h2>
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+  {% if otp_code %}
+    <div class="alert alert-info">
+      <!-- WARNING: Only use this for testing/development purposes -->
+      Your OTP code is: <strong>{{ otp_code }}</strong>
+    </div>
+  {% endif %}
+  <p>Please enter the OTP code shown above (or received via SMS in production):</p>
+  <form method="POST">
+    {% csrf_token %}
+    <div class="form-group">
+      <label for="otp">OTP</label>
+      <input type="text" name="otp" id="otp" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Verify OTP</button>
+  </form>
+</div>
+{% endblock %}

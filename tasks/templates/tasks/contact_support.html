@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2 class="text-center mb-4">Contact Support</h2>
+    
+    <!-- Chatbox -->
+    <div id="chat-container">
+        <div id="chat-box">
+            <div class="bot-message">Hello! How can I assist you today? 😊</div>
+        </div>
+        
+        <!-- Input Field -->
+        <div class="input-group mt-3">
+            <input type="text" id="user-input" class="form-control" placeholder="Type your message..." autocomplete="off">
+            <div class="input-group-append">
+                <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chatbot JavaScript -->
+<script>
+    function sendMessage() {
+        let userInput = document.getElementById("user-input").value.trim();
+        if (userInput === "") return;
+
+        // Display user message
+        let chatBox = document.getElementById("chat-box");
+        let userMessage = `<div class="user-message">${userInput}</div>`;
+        chatBox.innerHTML += userMessage;
+
+        // Scroll to the latest message
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Process bot response
+        setTimeout(() => {
+            let botResponse = getBotResponse(userInput);
+            chatBox.innerHTML += `<div class="bot-message">${botResponse}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }, 1000);
+
+        // Clear input field
+        document.getElementById("user-input").value = "";
+    }
+
+    function getBotResponse(input) {
+        let responses = {
+            "hello": "Hi there! How can I help you? 😊",
+            "hi": "Hello! How can I assist you?",
+            "how are you": "I'm just a bot, but I'm here to help! 🤖",
+            "forgot password": "Click on 'Login' and select 'Forgot Password' to reset it.",
+            "reset password": "Go to the login page and click on 'Forgot Password' to reset.",
+            "payment issues": "If you're having payment issues, please check your internet connection or contact support.",
+            "withdrawal delay": "Withdrawals usually take up to 24 hours. If delayed, please contact support.",
+            "how to earn money": "You can earn money by completing tasks, referring friends, and staying active on our platform!",
+            "how to invite friends": "Go to the 'Invite' section, copy your referral link, and share it with your friends. The more you invite, the more you earn!",
+            "where is my referral link": "Go to the 'Invite' page to find your referral link and share it with friends.",
+            "how does the platform work": "Our platform allows users to complete tasks, earn rewards, and invite friends to earn more. You can withdraw your earnings once you meet the minimum threshold.",
+            "minimum withdrawal amount": "The minimum withdrawal amount is specified in the 'Withdraw' section. Check your dashboard for the latest info.",
+            "how to withdraw money": "Go to your dashboard, click 'Withdraw,' enter the amount, and submit your request. Processing takes up to 24 hours.",
+            "phone number": "You can contact us at 0729168968 for direct support.",
+            "contact support": "You can contact our support team at 0729168968 for further assistance.",
+            "default": "I'm not sure about that. Please contact our support team for further assistance at 0729168968. 📞"
+        };
+
+        return responses[input.toLowerCase()] || responses["default"];
+    }
+
+    // Allow sending message with Enter key
+    document.getElementById("user-input").addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    });
+</script>
+
+<!-- Chatbot CSS -->
+<style>
+    #chat-container {
+        max-width: 600px;
+        margin: auto;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 15px;
+        background: #f8f9fa;
+        box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    #chat-box {
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 10px;
+        background: white;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+
+    .bot-message, .user-message {
+        max-width: 80%;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .bot-message {
+        background: #007bff;
+        color: white;
+        text-align: left;
+    }
+
+    .user-message {
+        background: #28a745;
+        color: white;
+        text-align: right;
+        margin-left: auto;
+    }
+</style>
+{% endblock %}
