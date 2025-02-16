@@ -15,6 +15,10 @@
              <option value="airtel">Airtel Money</option>
           </select>
       </div>
+      
+      <!-- Instructions Area -->
+      <div id="payment-instructions" class="alert alert-info" style="display:none;"></div>
+      
       <div class="form-group">
           <label for="amount">Amount:</label>
           <input type="number" step="0.01" name="amount" id="amount" class="form-control" required>
@@ -26,4 +30,38 @@
       <button type="submit" class="btn btn-success">Submit Deposit Request</button>
   </form>
 </div>
+
+<script>
+  // Listen for changes on the payment method select element
+  document.getElementById('payment_method').addEventListener('change', function() {
+    var method = this.value;
+    var instructionsDiv = document.getElementById('payment-instructions');
+    
+    if(method === 'mpesa'){
+      instructionsDiv.style.display = 'block';
+      instructionsDiv.innerHTML = '<strong>Safaricom M-Pesa Instructions:</strong><br>' +
+        '1. Dial <em>*334#</em> on your phone.<br>' +
+        '2. Select the option to send money.<br>' +
+        '3. Enter the recipient number: <strong>0729168968</strong>.<br>' +
+        '4. Input the amount and your transaction reference, then confirm the payment.';
+    } else if(method === 'binance'){
+      instructionsDiv.style.display = 'block';
+      instructionsDiv.innerHTML = '<strong>Binance Deposit Instructions:</strong><br>' +
+        '1. Log in to your Binance account.<br>' +
+        '2. Navigate to the Deposit section.<br>' +
+        '3. Use the email: <strong>vincentkipkoech937@gmail.com</strong> as the account identifier.<br>' +
+        '4. Follow the on-screen instructions to complete the deposit, including your transaction reference.';
+    } else if(method === 'airtel'){
+      instructionsDiv.style.display = 'block';
+      instructionsDiv.innerHTML = '<strong>Airtel Money Instructions:</strong><br>' +
+        '1. Open your Airtel Money app or dial the service code.<br>' +
+        '2. Select the option to send money.<br>' +
+        '3. Enter the recipient number: <strong>0729168968</strong>.<br>' +
+        '4. Enter the amount and, if applicable, your transaction reference, then confirm the transaction.';
+    } else {
+      instructionsDiv.style.display = 'none';
+      instructionsDiv.innerHTML = '';
+    }
+  });
+</script>
 {% endblock %}
