@@ -1,10 +1,10 @@
 /* 
    styles.css for Vintech-Technologies Platform
    ---------------------------------------------
-   A complete, responsive stylesheet to provide a modern, professional look.
+   A complete, responsive stylesheet providing a modern, professional look.
 */
 
-/* Reset and Box Sizing */
+/* Reset & Box Sizing */
 * {
   margin: 0;
   padding: 0;
@@ -16,14 +16,13 @@ body {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 1.6;
-  background-color: #2ece0e;
-  color: #181515;
+  background-color: #f4f7f6;  /* Light, neutral background */
+  color: #333;
 }
 
 /* Header */
 header {
-  background-color: #003366;
-  color: #1a6dd8;
+  background-color: #003366;  /* Dark blue */
   padding: 20px 0;
   text-align: center;
   position: relative;
@@ -35,13 +34,14 @@ header .brand-logo {
 }
 header h1 {
   font-size: 2.5rem;
+  color: #ffffff; /* White for contrast */
   margin-bottom: 10px;
 }
 nav {
   margin-top: 10px;
 }
 nav a {
-  color: #d13131;
+  color: #ffffff;
   margin: 0 15px;
   text-decoration: none;
   font-weight: bold;
@@ -49,7 +49,7 @@ nav a {
   transition: color 0.3s ease;
 }
 nav a:hover {
-  color: #ffd700;
+  color: #ffd700; /* Gold on hover */
 }
 
 /* Main Container */
@@ -57,7 +57,7 @@ nav a:hover {
   width: 90%;
   max-width: 1200px;
   margin: 30px auto;
-  background-color: #e41313;
+  background-color: #ffffff;
   padding: 30px;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -84,9 +84,7 @@ p {
 }
 
 /* Buttons */
-.btn, 
-button, 
-input[type="submit"] {
+.btn, button, input[type="submit"] {
   display: inline-block;
   padding: 10px 20px;
   background-color: #003366;
@@ -98,9 +96,7 @@ input[type="submit"] {
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
-.btn:hover,
-button:hover,
-input[type="submit"]:hover {
+.btn:hover, button:hover, input[type="submit"]:hover {
   background-color: #002244;
 }
 
@@ -182,7 +178,7 @@ ul.list-unstyled li h3 {
   color: #003366;
 }
 
-/* Input Field for Invitation Link */
+/* Invitation Link Input */
 #inviteLink {
   width: 80%;
   padding: 10px;
@@ -204,28 +200,27 @@ ul.list-unstyled li h3 {
     padding: 20px;
   }
 }
-/* Make the Welcome Text More Visible */
+
+/* Welcome Text Styling */
 .welcome-text {
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-    font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+  font-weight: bold;
 }
 
 /* Hover Effect for Earning Boxes */
 .earning-box {
-    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 }
-
 .earning-box:hover {
-    transform: scale(1.05);
-    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3);
+  transform: scale(1.05);
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 /* Hover Effect for Action Buttons */
 .action-btn {
-    transition: transform 0.2s ease-in-out, background-color 0.3s ease-in-out;
+  transition: transform 0.2s ease-in-out, background-color 0.3s ease-in-out;
 }
-
 .action-btn:hover {
-    transform: scale(1.1);
-    background-color: #0056b3 !important;
+  transform: scale(1.1);
+  background-color: #0056b3 !important;
 }
