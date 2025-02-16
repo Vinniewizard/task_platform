@@ -11,16 +11,39 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
+  <style>
+    body {
+      text-align: center;
+      padding-top: 0.1px;
+      background-color: palegreen;
+      flex-basis: auto;
+    }
+    .task-container {
+      max-width: 500px;
+      margin: auto;
+      padding: 200px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+      background-color: rgb(64, 247, 192);
+    }
+    .nav {
+      font-size: 20px;
+      font-weight: bold;
+      color: red;
+    }
+  </style>
 <body>
     <header class="bg-primary text-white py-3">
       <div class="container text-center">
-        <img class="brand-logo mb-2" src="{% static 'images/vintech-logo.png' %}" alt="Vintech-Technologies Logo" style="max-width:150px;">
+        <img class="brand-logo mb-2" src="{% static 'tasks_platform/images/vintech-logo.png' %}" alt="Vintech-Technologies Logo" style="max-width:150px;">
         <h1 class="h3">Vintech-Technologies</h1>
         <nav>
             <a href="{% url 'home' %}" class="text-white mx-2">Home</a>
             <a href="{% url 'choose_plan' %}" class="text-white mx-2">Choose Plan</a>
             <a href="{% url 'invite' %}" class="text-white mx-2">Invite</a>
             <a href="{% url 'contact_support' %}" class="text-white mx-2">Contact Support</a>
+            <a href="{% url 'currency_converter' %}" class="text-white mx-2">Converter</a>
             {% if user.is_authenticated %}
                 <a href="{% url 'logout' %}" class="text-white mx-2">Logout</a>
             {% else %}

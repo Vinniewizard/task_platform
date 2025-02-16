@@ -1,5 +1,26 @@
 {% extends 'base.html' %}
 {% block content %}
+  <style>
+    body {
+      text-align: center;
+      padding-top: 20px;
+      background-color: blueviolet;
+      flex-basis: auto;
+    }
+    .task-container {
+      max-width: 50px;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+      background-color: rgb(64, 247, 192);
+      }
+      .form-group{
+        color: bisque;
+        tab-size: 0cm;
+      }
+  </style>
 <div class="container my-5">
   <h2>Withdraw Money</h2>
   <form method="POST">
