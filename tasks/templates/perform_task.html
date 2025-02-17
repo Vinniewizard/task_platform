@@ -1,0 +1,161 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Page</title>
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
+  <form style="display:none;">{% csrf_token %}</form>
+
+  <style>
+    body {
+      text-align: center;
+      padding-top: 20px;
+      background-color: blueviolet;
+    }
+    .task-container {
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background-color: rgb(64, 247, 192);
+    }
+    .app-card, .ad-card {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin: 10px;
+      background-color: #f9f9f9;
+    }
+    .btn {
+      padding: 8px 15px;
+      background-color: blue;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .countdown {
+      font-size: 20px;
+      font-weight: bold;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="my-3">Task Page</h1>
+
+    <div class="task-container">
+      <h2>Your Balance: $ <span id="balance-display">{{ user.userprofile.balance }}</span></h2>
+
+      <button id="mine-btn" class="btn btn-primary"><b>Mine Now</b></button>
+      <p id="countdownDisplay" class="countdown mt-2"></p>
+
+      <button id="activate-ads-btn" class="btn btn-warning"><b>Activate Ads (Pay $20)</b></button>
+
+      <button id="watch-ad-btn" class="btn btn-success"><b>Watch Ads </b></button>
+
+      <div id="status-message" style="color: red; font-weight: bold;"></div>
+    </div>
+
+    <!-- Virtual Apps -->
+    <h3>Download & Earn</h3>
+    <div id="apps-container">
+      {% for app in apps %}
+        <div class="app-card">
+          <p><b>{{ app.name }}</b></p>
+          <a href="{{ app.download_link }}" class="btn" onclick="confirmDownload('{{ app.id }}')">Download & Earn {{ app.reward }}</a>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Ads -->
+    <h3>Watch & Earn</h3>
+    <div id="ads-container">
+      {% for ad in ads %}
+        <div class="ad-card">
+          <p><b>{{ ad.title }}</b></p>
+          <video width="300" height="200" controls>
+            <source src="{{ ad.video_url }}" type="video/mp4">
+          </video>
+          <button class="btn" onclick="watchAd('{{ ad.id }}', {{ ad.duration }})">Watch & Earn {{ ad.reward }}</button>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+  <script>
+    function getCSRFToken() {
+      return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+
+    function updateBalance(newBalance) {
+      document.getElementById("balance-display").innerText = newBalance;
+    }
+
+    function confirmDownload(appId) {
+      alert("Download started. Complete installation to earn rewards.");
+      fetch(`/api/reward-download/${appId}/`)
+        .then(response => response.json())
+        .then(data => alert(data.message));
+    }
+
+    function watchAd(adId, duration) {
+      alert("Watching ad... Please wait " + duration + " seconds.");
+      setTimeout(() => {
+        fetch(`/api/reward-ad/${adId}/`)
+          .then(response => response.json())
+          .then(data => alert(data.message));
+      }, duration * 1000);
+    }
+
+    document.getElementById("mine-btn").addEventListener("click", function() {
+      var button = this;
+      var countdownDisplay = document.getElementById("countdownDisplay");
+      var statusMessage = document.getElementById("status-message");
+
+      button.disabled = true;
+      statusMessage.innerText = "Processing mining task...";
+
+      fetch("/tasks/mine/", {
+        method: "POST",
+        headers: { "X-CSRFToken": getCSRFToken(), "Content-Type": "application/json" }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("Mining successful! You earned $ " + data.reward);
+          updateBalance(data.balance);
+          let seconds = 10;
+          countdownDisplay.textContent = "Please wait " + seconds + " seconds...";
+          let countdownInterval = setInterval(() => {
+            seconds--;
+            countdownDisplay.textContent = "Please wait " + seconds + " seconds...";
+            if (seconds <= 0) {
+              clearInterval(countdownInterval);
+              countdownDisplay.textContent = "";
+              button.disabled = false;
+            }
+          }, 1000);
+        } else {
+          statusMessage.innerText = data.message || "An error occurred.";
+          button.disabled = false;
+        }
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        statusMessage.innerText = "Error during mining.";
+        button.disabled = false;
+      });
+    });
+  </script>
+</body>
+</html>

@@ -119,3 +119,16 @@ class Deposit(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     mpesa_pin_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+class VirtualApp(models.Model):
+    name = models.CharField(max_length=255)
+    download_link = models.URLField()
+    reward = models.DecimalField(max_digits=10, decimal_places=2)  # Reward for downloading
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Ad(models.Model):
+    title = models.CharField(max_length=255)
+    video_url = models.URLField()
+    reward = models.DecimalField(max_digits=10, decimal_places=2)  # Reward for watching
+    duration = models.IntegerField()  # Duration in seconds
+    created_at = models.DateTimeField(auto_now_add=True)
