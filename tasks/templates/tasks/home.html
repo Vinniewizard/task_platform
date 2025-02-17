@@ -3,173 +3,121 @@
 {% block content %}
 
 {% if not user.is_authenticated %}
-  <!-- Visitor (Not logged in) -->
+  <!-- Guest View: Visitors can explore info, but earning actions are hidden -->
   <div class="hero-section text-center py-5" style="background: url('{% static 'images/hero-bg.jpg' %}') no-repeat center; background-size: cover;">
     <div class="container text-white">
-      <h2 class="display-4">Welcome to Vintech-Technologies</h2>
-      <p class="lead">Earn money online with flexible plans and real-time rewards!</p>
+      <h2 class="display-4 font-weight-bold">Welcome to Vintech-Technologies</h2>
+      <p class="lead">Discover our innovative platform that empowers you to earn money online with flexible plans and real-time rewards.</p>
       <a href="{% url 'register' %}" class="btn btn-lg btn-primary mr-2">Join Now</a>
       <a href="{% url 'login' %}" class="btn btn-lg btn-secondary">Login</a>
     </div>
   </div>
-  <div class="container my-5">
-    <h3 class="text-center">Please register or login to start earning.</h3>
+
+  <div class="container my-5 text-center">
+    <h3 class="font-weight-bold">Explore Our Platform</h3>
+    <p>Learn how our platform works, read testimonials, view FAQs, and discover earning opportunities. Sign up to unlock tasks, deposits, withdrawals, and plan options.</p>
+    <!-- Additional non-earning content such as testimonials or FAQs could go here -->
   </div>
 
 {% else %}
   {% if not user.userprofile.plan %}
-    <!-- Logged in but no active plan -->
-    <div class="hero-section text-center py-5" style="background: url('{% static 'images/hero-bg.jpg' %}') no-repeat center; background-size: cover;">
-      <div class="container text-white">
+    <!-- Registered but no active plan: Show info, but disable earning actions -->
+    <div class="hero-section text-center py-5 bg-dark text-white">
+      <div class="container">
         <h2 class="display-4">Welcome, {{ user.username }}!</h2>
-        <p class="lead">To start earning, please choose a plan below.</p>
-        <a href="{% url 'choose_plan' %}" class="btn btn-lg btn-primary">Choose Your Plan</a>
+        <p class="lead">You're registered! To start earning, please choose a plan.</p>
+        <a href="{% url 'choose_plan' %}" class="btn btn-lg btn-warning">Choose Your Plan</a>
       </div>
     </div>
-    <div class="container my-5">
-      <p class="text-center">After choosing your plan, you'll have full access to our earning features.</p>
+
+    <div class="container my-5 text-center">
+      <h3 class="font-weight-bold">Explore Our Platform</h3>
+      <p>Even without an active plan, you can explore our platform, read testimonials, and learn about how our system works. Once you choose a plan, you'll unlock full earning functionality.</p>
     </div>
-  
+
   {% else %}
-    <!-- Logged in and has an active plan -->
+    <!-- Registered with an active plan: Full Dashboard with earning actions -->
     <div class="hero-section text-center py-5" style="background: url('{% static 'images/hero-bg.jpg' %}') no-repeat center; background-size: cover;">
-      <div class="container text-pink">
-       <b> <h2 class="display-4">Welcome back, {{ user.username }}!</h2></b>
-        <p class="lead">Your earning journey starts here!</p>
+      <div class="container text-white">
+        <h2 class="display-4 welcome-text">Welcome back, {{ user.username }}!</h2>
+        <p class="lead welcome-text">Your earning journey starts here!</p>
       </div>
     </div>
 
     <!-- Summary Info Box -->
     <div class="container my-4">
-      <div class="card shadow-sm">
+      <div class="card shadow-sm border-0">
         <div class="card-body text-center">
-          <h4 class="card-title">Hello, {{ user.username }}!</h4>
-          <p class="card-text">
-            Balance: <strong>$ {{ user.userprofile.balance }}</strong> &nbsp; | &nbsp;
-            Plan: <strong>{{ user.userprofile.plan.name }}</strong>
-          </p>
+          <h4 class="font-weight-bold">Account Overview</h4>
+          <p>Balance: <strong class="text-success">$ {{ user.userprofile.balance }}</strong></p>
+          <p>Active Plan: <strong>{{ user.userprofile.plan.name }}</strong></p>
         </div>
       </div>
     </div>
 
-    <!-- Feature Cards Section -->
+    <!-- Action Buttons Section -->
     <div class="container my-5">
-      <div class="row mb-4">
-        <!-- Feature Cards: Deposit, Withdraw, Tasks, Dashboard, Support, Logout -->
+      <div class="row text-center">
         <div class="col-md-4 mb-4">
-          <div class="card shadow-sm">
-            <div class="card-body text-center">
-              <h5 class="card-title">Deposit</h5>
-              <p class="card-text">Add funds securely.</p>
-              <a href="{% url 'deposit' %}" class="btn btn-success">Deposit</a>
-            </div>
-          </div>
+          <a href="{% url 'deposit' %}" class="btn btn-lg btn-success btn-block py-3 action-btn">Deposit</a>
         </div>
         <div class="col-md-4 mb-4">
-          <div class="card shadow-sm">
-            <div class="card-body text-center">
-              <h5 class="card-title">Withdraw</h5>
-              <p class="card-text">Min. $50.</p>
-              <a href="{% url 'withdrawal' %}" class="btn btn-danger">Withdraw</a>
-            </div>
-          </div>
+          <a href="{% url 'withdrawal' %}" class="btn btn-lg btn-danger btn-block py-3 action-btn">Withdraw</a>
         </div>
         <div class="col-md-4 mb-4">
-          <div class="card shadow-sm">
-            <div class="card-body text-center">
-              <h5 class="card-title">Tasks</h5>
-              <p class="card-text">Earn via mining/ads.</p>
-              <a href="{% url 'perform_task' %}" class="btn btn-info">Tasks</a>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4 mb-4">
-          <div class="card shadow-sm">
-            <div class="card-body text-center">
-              <h5 class="card-title">Dashboard</h5>
-              <p class="card-text">Track your earnings.</p>
-              <a href="{% url 'home' %}" class="btn btn-secondary">Dashboard</a>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4 mb-4">
-          <div class="card shadow-sm">
-            <div class="card-body text-center">
-              <h5 class="card-title">Support</h5>
-              <p class="card-text">Get help when needed.</p>
-              <a href="{% url 'contact_support' %}" class="btn btn-warning">Support</a>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4 mb-4">
-          <div class="card shadow-sm">
-            <div class="card-body text-center">
-              <h5 class="card-title">Logout</h5>
-              <p class="card-text">Sign out securely.</p>
-              <a href="{% url 'logout' %}" class="btn btn-dark">Logout</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    
-      <!-- Invitation Section -->
-      <div class="row my-5">
-        <div class="col text-center">
-          <h3>Invite Friends & Earn Rewards</h3>
-          <p class="lead">Share your unique invitation link and earn bonuses when your friends join and upgrade.</p>
-          <a href="{% url 'invite' %}" class="btn btn-primary btn-lg">Get Your Invitation Link</a>
-        </div>
-      </div>
-      
-      <!-- Methods of Earnings Section -->
-      <div class="row my-5">
-        <div class="col">
-          <h3 class="text-center">How You Earn</h3>
-          <p class="lead text-center">Discover various ways to boost your earnings:</p>
-          <div class="row">
-            <div class="col-md-4 mb-4">
-              <div class="card shadow-sm">
-                <div class="card-body">
-                  <h5 class="card-title">Mining</h5>
-                  <p class="card-text">Complete tasks to earn a fixed reward per mining task.</p>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4 mb-4">
-              <div class="card shadow-sm">
-                <div class="card-body">
-                  <h5 class="card-title">Watching Ads</h5>
-                  <p class="card-text">Activate and watch ads for bonus rewards within daily limits.</p>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4 mb-4">
-              <div class="card shadow-sm">
-                <div class="card-body">
-                  <h5 class="card-title">Referral Bonus</h5>
-                  <p class="card-text">Invite friends using your unique link to earn extra rewards.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Optional Testimonials/Info Section -->
-      <div class="row my-5">
-        <div class="col">
-          <h3 class="text-center">Why Choose Vintech-Technologies?</h3>
-          <p class="lead text-center">
-            Enjoy flexible earning opportunities through mining, ad-watching, and referrals. Upgrade your plan, invite friends, and watch your income grow.
-          </p>
+          <a href="{% url 'perform_task' %}" class="btn btn-lg btn-info btn-block py-3 action-btn">Perform Tasks</a>
         </div>
       </div>
     </div>
-  
-<div class="container">
-    <h2 class="text-center">Welcome to Our Platform!</h2>
 
-    <!-- Recent Withdrawals Ticker -->
+    <!-- Additional Information: Explore, Referral, How You Earn, etc. -->
+    <div class="container text-center my-5">
+      <h3 class="font-weight-bold">Invite & Earn More</h3>
+      <p class="lead">Refer friends and earn extra rewards when they join and upgrade their plans.</p>
+      <a href="{% url 'invite' %}" class="btn btn-primary btn-lg action-btn">Get Your Referral Link</a>
+    </div>
+
+    <div class="container my-5">
+      <h3 class="text-center font-weight-bold">How You Earn</h3>
+      <div class="row">
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title">Mining</h5>
+              <p class="card-text">Complete mining tasks to earn a fixed reward per task.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title">Watching Ads</h5>
+              <p class="card-text">Activate and watch ads for bonus rewards within daily limits.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title">Referral Bonus</h5>
+              <p class="card-text">Invite friends using your unique link to earn extra rewards.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container text-center my-5">
+      <h3 class="font-weight-bold">Why Choose Vintech-Technologies?</h3>
+      <p class="lead">Enjoy flexible earning opportunities, secure transactions, and 24/7 support. Explore our platform to learn more about how you can maximize your income.</p>
+    </div>
+  {% endif %}
+{% endif %}
+
+<!-- Recent Withdrawals Ticker Section (optional for active users) -->
+{% if user.is_authenticated and user.userprofile.plan %}
+<div class="container">
+    <h2 class="text-center">Recent Withdrawals</h2>
     <div id="withdrawal-box">
         <p id="withdrawal-text">Loading recent withdrawals...</p>
     </div>
@@ -192,11 +140,9 @@
         setTimeout(fetchWithdrawal, nextUpdate);
     }
 
-    // Start fetching withdrawals when page loads
     document.addEventListener("DOMContentLoaded", fetchWithdrawal);
 </script>
 
-<!-- CSS to Style Withdrawals Box -->
 <style>
     #withdrawal-box {
         max-width: 500px;
@@ -211,13 +157,10 @@
         color: #d98300;
         animation: fadeIn 1s ease-in-out;
     }
-
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
     }
 </style>
-  {% endif %}
 {% endif %}
-
 {% endblock %}
