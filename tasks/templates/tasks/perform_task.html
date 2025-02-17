@@ -20,7 +20,6 @@
       text-align: center;
       padding-top: 20px;
       background-color: blueviolet;
-      flex-basis: auto;
     }
     .task-container {
       max-width: 500px;
@@ -36,7 +35,7 @@
       font-weight: bold;
       color: red;
     }
-    /* New sections for virtual apps and ads */
+    /* Virtual Apps and Ads Sections */
     .apps-list, .ads-list {
       margin-top: 20px;
       text-align: left;
@@ -54,6 +53,13 @@
     .app-item button, .ad-item button {
       margin-left: 10px;
     }
+    /* Completion Message */
+    .completion-message {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      color: green;
+    }
   </style>
 </head>
 <body>
@@ -61,32 +67,23 @@
     <h1 class="my-3">Task Page</h1>
 
     <div class="task-container">
-      <h2>Your Balance: $ <span id="balance-display">{{ user.userprofile.balance }}</span></h2>
-
-      <!-- Existing Buttons (Mine, Activate Ads, Watch Ad) -->
-      <button id="mine-btn" class="btn btn-primary"><b>Mine Now</b></button>
-      <p id="countdownDisplay" class="countdown mt-2"></p>
-      <br/>
-
-      <button id="activate-ads-btn" class="btn btn-warning"><b>Activate Ads (Pay $20)</b></button>
-      <br/><br/>
-
-      <button id="watch-ad-btn" class="btn btn-success"><b>Watch Ads</b></button>
-      <br/><br/>
-
-      <div id="status-message" style="color: red; font-weight: bold;"></div>
-
-      <!-- New Section: Virtual Apps to 'Download' (simulates 20-second process) -->
+      <!-- Virtual Apps Section -->
       <div class="apps-list" id="apps-list">
         <h3>Virtual Apps to Download</h3>
-        <!-- Items will be populated by JavaScript -->
       </div>
 
-      <!-- New Section: Virtual Ads to 'Watch' (simulates random 5-30 second process) -->
+      <!-- Virtual Ads Section -->
       <div class="ads-list" id="ads-list">
         <h3>Virtual Ads to Watch</h3>
-        <!-- Items will be populated by JavaScript -->
       </div>
+
+      <!-- Completion Message -->
+      <div id="completion-message" class="completion-message" style="display:none;">
+        Congratulations! You have completed today's tasks.
+      </div>
+
+      <!-- Status Message -->
+      <div id="status-message" style="color: red; font-weight: bold;"></div>
     </div>
   </div>
 
@@ -99,138 +96,48 @@
       return document.querySelector('[name=csrfmiddlewaretoken]').value;
     }
 
-    // Update Balance Display
+    // Update Balance Display (if needed)
     function updateBalance(newBalance) {
-      document.getElementById("balance-display").innerText = newBalance;
+      // You may choose to update a balance display if you still show it elsewhere.
+      // For this example, we assume the new balance is updated in a different part of the UI.
+      console.log("Updated balance: ", newBalance);
     }
 
-    // Existing: Mine Now
-    document.getElementById("mine-btn").addEventListener("click", function() {
-      const button = this;
-      const countdownDisplay = document.getElementById("countdownDisplay");
-      const statusMessage = document.getElementById("status-message");
-
-      button.disabled = true;
-      statusMessage.innerText = "Processing mining task...";
-
-      fetch("/tasks/mine/", {
-        method: "POST",
-        headers: {
-          "X-CSRFToken": getCSRFToken(),
-          "Content-Type": "application/json"
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.status === "success") {
-          alert("Mining successful! You earned $ " + data.reward);
-          updateBalance(data.balance);
-          
-          // Start 10-second countdown
-          let seconds = 100;
-          countDisplay.textContent = "Please wait " + seconds + " seconds before mining again...";
-          let countInterval = setInterval(() => {
-            seconds--;
-            countDisplay.textContent = "Please wait " + seconds + " seconds before mining again...";
-            if (seconds <= 0) {
-              clearInterval(countdownInterval);
-              countDisplay.textContent = "";
-              button.disabled = false;
-            }
-          }, 1000);
-        } 
-        else if (data.message === "Daily mining limit reached") {
-          statusMessage.innerText = "Daily mining limit reached. Try again tomorrow.";
-          button.disabled = false;
-        } 
-        else {
-          statusMessage.innerText = data.message || "An error occurred.";
-          button.disabled = false;
-        }
-      })
-      .catch(error => {
-        console.error("Error during mining:", error);
-        statusMessage.innerText = "Error during mining.";
-        button.disabled = false;
-      });
-    });
-
-    // Existing: Activate Ads
-    document.getElementById("activate-ads-btn").addEventListener("click", function() {
-      document.getElementById("status-message").innerText = "Activating ads...";
-      fetch("/tasks/activate_ads/", {
-        method: "POST",
-        headers: {
-          "X-CSRFToken": getCSRFToken(),
-          "Content-Type": "application/json"
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.status === "success") {
-          alert("Ads activated successfully!");
-          updateBalance(data.balance);
-          document.getElementById("status-message").innerText = "";
-        } else {
-          document.getElementById("status-message").innerText = data.message || data.error;
-        }
-      })
-      .catch(error => {
-        console.error("Error activating ads:", error);
-        document.getElementById("status-message").innerText = "Error activating ads.";
-      });
-    });
-
-    // Existing: Watch Ad
-    document.getElementById("watch-ad-btn").addEventListener("click", function() {
-      document.getElementById("status-message").innerText = "Watching ad... Please wait 10 seconds.";
-      fetch("/tasks/watch_ad/", {
-        method: "POST",
-        headers: {
-          "X-CSRFToken": getCSRFToken(),
-          "Content-Type": "application/json"
-        }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.status === "success") {
-          alert("Ad watched successfully! You earned $ " + data.reward);
-          updateBalance(data.balance);
-          document.getElementById("status-message").innerText = "";
-        } else {
-          document.getElementById("status-message").innerText = data.message || data.error;
-        }
-      })
-      .catch(error => {
-        console.error("Error watching ad:", error);
-        document.getElementById("status-message").innerText = "Error watching ad.";
-      });
-    });
-
-
-    /* 
-      NEW FEATURE: 
-      Virtual Apps (20s download simulation => calls /tasks/mine/)
-      Virtual Ads (random 5-30s watch => calls /tasks/watch_ad/)
-    */
-
-    // Example arrays of 'virtual apps' and 'virtual ads'
+    // --- New Feature: Virtual Apps & Ads Simulation ---
     const virtualApps = [
       "Speedy Messenger",
       "Galaxy Browser",
       "Magic Puzzle",
       "Crypto Tracker",
-      "Virtual VPN"
+      "Virtual VPN",
+      "Zen Fitness",
+      "Photo Magic"
     ];
     const virtualAds = [
       "Ad: Amazing Shoes",
       "Ad: Super Car",
       "Ad: Discount Flights",
       "Ad: New Smartphone",
-      "Ad: Healthy Snacks"
+      "Ad: Healthy Snacks",
+      "Ad: Exclusive Watches",
+      "Ad: Premium Headphones"
     ];
 
-    // Helper to create an app item in DOM
+    // Calculate available apps and ads based on template variables.
+    const availableMines = {{ daily_mines|default:0 }} - {{ mines_done|default:0 }};
+    const availableAds = {{ daily_ads|default:0 }} - {{ ads_watched|default:0 }};
+
+    // Function to check if tasks are completed
+    function checkCompletion() {
+      const appsListDiv = document.getElementById("apps-list");
+      const adsListDiv = document.getElementById("ads-list");
+      if (appsListDiv.children.length === 1 && adsListDiv.children.length === 1) {  
+        // The h3 headers remain; if there's only 1 child in each, then list is empty.
+        document.getElementById("completion-message").style.display = "block";
+      }
+    }
+
+    // Function to create a virtual app item
     function createAppItem(appName) {
       const container = document.createElement("div");
       container.className = "app-item";
@@ -238,34 +145,32 @@
         <span>${appName}</span>
         <button class="btn btn-sm btn-info">Download</button>
       `;
-      // On click, simulate 20s 'download' => calls /tasks/mine/
       const downloadBtn = container.querySelector("button");
-      downloadBtn.addEventListener("click", () => simulateAppDownload(appName, downloadBtn));
+      downloadBtn.addEventListener("click", () => simulateAppDownload(container, appName, downloadBtn));
       return container;
     }
 
-    // Simulate 20s 'download' => calls /tasks/mine/
-    function simulateAppDownload(appName, button) {
+    // Simulate app download for 20 seconds then remove item and call /tasks/mine/
+    function simulateAppDownload(container, appName, button) {
       button.disabled = true;
       alert(`Starting download for ${appName} (simulation only)...`);
-
       let seconds = 20;
       const originalText = button.textContent;
       button.textContent = `Downloading... ${seconds}s`;
-      
       const interval = setInterval(() => {
         seconds--;
         button.textContent = `Downloading... ${seconds}s`;
         if (seconds <= 0) {
           clearInterval(interval);
-          button.textContent = originalText;
           alert(`Download complete for ${appName}! Earning your mine reward...`);
           callMineEndpoint(button);
+          // Remove the downloaded app item
+          container.remove();
+          checkCompletion();
         }
       }, 1000);
     }
 
-    // Calls the /tasks/mine/ endpoint
     function callMineEndpoint(button) {
       button.disabled = true;
       fetch("/tasks/mine/", {
@@ -281,18 +186,18 @@
           alert("You earned $ " + data.reward + " from this download simulation!");
           updateBalance(data.balance);
         } else {
-          alert(data.message || "Error occurred during mining.");
+          alert(data.message || "Error during mining simulation.");
         }
         button.disabled = false;
       })
       .catch(error => {
         console.error("Error calling /tasks/mine/:", error);
-        alert("Error occurred during the download simulation.");
+        alert("Error during the download simulation.");
         button.disabled = false;
       });
     }
 
-    // Helper to create an ad item in DOM
+    // Function to create a virtual ad item
     function createAdItem(adName) {
       const container = document.createElement("div");
       container.className = "ad-item";
@@ -300,35 +205,33 @@
         <span>${adName}</span>
         <button class="btn btn-sm btn-warning">Watch</button>
       `;
-      // On click, simulate random 5-30s watch => calls /tasks/watch_ad/
       const watchBtn = container.querySelector("button");
-      watchBtn.addEventListener("click", () => simulateAdWatch(adName, watchBtn));
+      watchBtn.addEventListener("click", () => simulateAdWatch(container, adName, watchBtn));
       return container;
     }
 
-    // Simulate random 5-30s watch => calls /tasks/watch_ad/
-    function simulateAdWatch(adName, button) {
+    // Simulate ad watch for random 5-30 seconds, then remove item and call /tasks/watch_ad/
+    function simulateAdWatch(container, adName, button) {
       button.disabled = true;
-      const watchTime = Math.floor(Math.random() * 26) + 5; // random between 5-30
+      const watchTime = Math.floor(Math.random() * 26) + 5; // random between 5-30 seconds
       alert(`Starting to watch ${adName} for ~${watchTime} seconds (simulation only)...`);
-
       let seconds = watchTime;
       const originalText = button.textContent;
       button.textContent = `Watching... ${seconds}s`;
-
       const interval = setInterval(() => {
         seconds--;
         button.textContent = `Watching... ${seconds}s`;
         if (seconds <= 0) {
           clearInterval(interval);
-          button.textContent = originalText;
           alert(`Ad watch complete for ${adName}! Earning your ad reward...`);
           callWatchAdEndpoint(button);
+          // Remove the ad item after successful watch
+          container.remove();
+          checkCompletion();
         }
       }, 1000);
     }
 
-    // Calls the /tasks/watch_ad/ endpoint
     function callWatchAdEndpoint(button) {
       button.disabled = true;
       fetch("/tasks/watch_ad/", {
@@ -344,30 +247,41 @@
           alert("You earned $ " + data.reward + " from watching this ad!");
           updateBalance(data.balance);
         } else {
-          alert(data.message || "Error occurred during ad watch.");
+          alert(data.message || "Error during ad simulation.");
         }
         button.disabled = false;
       })
       .catch(error => {
         console.error("Error calling /tasks/watch_ad/:", error);
-        alert("Error occurred during the ad simulation.");
+        alert("Error during the ad simulation.");
         button.disabled = false;
       });
     }
 
-    // On page load, populate the Virtual Apps and Ads
+    // On page load, populate Virtual Apps and Virtual Ads based on available counts
     window.addEventListener("DOMContentLoaded", () => {
       const appsListDiv = document.getElementById("apps-list");
       const adsListDiv = document.getElementById("ads-list");
 
-      // For demonstration, show all availableApps and virtualAds
-      // (In a real scenario, you might filter based on how many mines/ads left)
-      virtualApps.forEach(appName => {
+      // Clear existing headers if any
+      // The header h3 is already in HTML, so the new items will be appended below.
+      let apps = [...virtualApps];
+      let ads = [...virtualAds];
+
+      // Shuffle arrays randomly
+      apps.sort(() => Math.random() - 0.5);
+      ads.sort(() => Math.random() - 0.5);
+
+      // Slice arrays to match available counts
+      apps = apps.slice(0, availableMines);
+      ads = ads.slice(0, availableAds);
+
+      apps.forEach(appName => {
         const appItem = createAppItem(appName);
         appsListDiv.appendChild(appItem);
       });
 
-      virtualAds.forEach(adName => {
+      ads.forEach(adName => {
         const adItem = createAdItem(adName);
         adsListDiv.appendChild(adItem);
       });
