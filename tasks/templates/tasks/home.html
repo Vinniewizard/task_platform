@@ -16,12 +16,11 @@
   <div class="container my-5 text-center">
     <h3 class="font-weight-bold">Explore Our Platform</h3>
     <p>Learn how our platform works, read testimonials, view FAQs, and discover earning opportunities. Sign up to unlock tasks, deposits, withdrawals, and plan options.</p>
-    <!-- Additional non-earning content such as testimonials or FAQs could go here -->
   </div>
 
 {% else %}
   {% if not user.userprofile.plan %}
-    <!-- Registered but no active plan: Show info, but disable earning actions -->
+    <!-- Registered but no active plan: Show info with a prompt to choose a plan -->
     <div class="hero-section text-center py-5 bg-dark text-white">
       <div class="container">
         <h2 class="display-4">Welcome, {{ user.username }}!</h2>
@@ -32,11 +31,11 @@
 
     <div class="container my-5 text-center">
       <h3 class="font-weight-bold">Explore Our Platform</h3>
-      <p>Even without an active plan, you can explore our platform, read testimonials, and learn about how our system works. Once you choose a plan, you'll unlock full earning functionality.</p>
+      <p>Even without an active plan, you can explore our platform and learn how our system works. Once you choose a plan, you'll unlock full earning functionality.</p>
     </div>
 
   {% else %}
-    <!-- Registered with an active plan: Full Dashboard with earning actions -->
+    <!-- Registered with an active plan: Full Dashboard -->
     <div class="hero-section text-center py-5" style="background: url('{% static 'images/hero-bg.jpg' %}') no-repeat center; background-size: cover;">
       <div class="container text-white">
         <h2 class="display-4 welcome-text">Welcome back, {{ user.username }}!</h2>
@@ -44,18 +43,18 @@
       </div>
     </div>
 
-    <!-- Summary Info Box -->
+    <!-- Account Overview -->
     <div class="container my-4">
       <div class="card shadow-sm border-0">
         <div class="card-body text-center">
           <h4 class="font-weight-bold">Account Overview</h4>
-          <p>Balance: <strong class="text-success">$ {{ user.userprofile.balance }}</strong></p>
+          <p>Balance: <strong class="text-success">KSh {{ user.userprofile.balance }}</strong></p>
           <p>Active Plan: <strong>{{ user.userprofile.plan.name }}</strong></p>
         </div>
       </div>
     </div>
 
-    <!-- Action Buttons Section -->
+    <!-- Action Buttons -->
     <div class="container my-5">
       <div class="row text-center">
         <div class="col-md-4 mb-4">
@@ -70,13 +69,14 @@
       </div>
     </div>
 
-    <!-- Additional Information: Explore, Referral, How You Earn, etc. -->
+    <!-- Referral Section -->
     <div class="container text-center my-5">
       <h3 class="font-weight-bold">Invite & Earn More</h3>
-      <p class="lead">Refer friends and earn extra rewards when they join and upgrade their plans.</p>
+      <p class="lead">Refer friends using your unique link and earn extra rewards when they join and upgrade their plans.</p>
       <a href="{% url 'invite' %}" class="btn btn-primary btn-lg action-btn">Get Your Referral Link</a>
     </div>
 
+    <!-- How You Earn Section -->
     <div class="container my-5">
       <h3 class="text-center font-weight-bold">How You Earn</h3>
       <div class="row">
@@ -92,7 +92,7 @@
           <div class="card shadow-sm">
             <div class="card-body text-center">
               <h5 class="card-title">Watching Ads</h5>
-              <p class="card-text">Activate and watch ads for bonus rewards within daily limits.</p>
+              <p class="card-text">Activate and watch ads to earn bonus rewards within your daily limit.</p>
             </div>
           </div>
         </div>
@@ -100,16 +100,21 @@
           <div class="card shadow-sm">
             <div class="card-body text-center">
               <h5 class="card-title">Referral Bonus</h5>
-              <p class="card-text">Invite friends using your unique link to earn extra rewards.</p>
+              <p class="card-text">Invite friends and earn extra rewards when they join and upgrade their plans.</p>
             </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Platform Description -->
     <div class="container text-center my-5">
-      <h3 class="font-weight-bold">Why Choose Vintech-Technologies?</h3>
-      <p class="lead">Enjoy flexible earning opportunities, secure transactions, and 24/7 support. Explore our platform to learn more about how you can maximize your income.</p>
+      <h3 class="font-weight-bold">Why Join Vintech-Technologies?</h3>
+      <p class="lead">
+         Vintech-Technologies was initiated in the US in 2024 and has empowered millions to earn daily incomes.
+         Launched in Kenya on January 10, 2025, our platform offers flexible earning opportunities and secure transactions.
+         Join us now and start earning big!
+      </p>
     </div>
   {% endif %}
 {% endif %}
@@ -134,12 +139,10 @@
                     `💸 <b>${data.name}</b> just withdrew <b>${data.amount}</b> via <b>${data.method}</b>! 🚀`;
             }
         });
-
         // Random interval between 2 to 10 seconds
         let nextUpdate = Math.floor(Math.random() * (10000 - 2000 + 1)) + 2000;
         setTimeout(fetchWithdrawal, nextUpdate);
     }
-
     document.addEventListener("DOMContentLoaded", fetchWithdrawal);
 </script>
 

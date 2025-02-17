@@ -12,10 +12,10 @@
   <!-- Custom CSS -->
   <link rel="stylesheet" href="{% static 'css/styles.css' %}">
   
-  <!-- Inline fallback styling to ensure background is visible -->
+  <!-- Inline fallback styling -->
   <style>
     body {
-      background-color: #f8f9fa; /* Light gray background */
+      background-color: #f8f9fa;
     }
   </style>
 </head>
@@ -23,7 +23,6 @@
   <!-- Header -->
   <header class="bg-primary text-white py-3">
     <div class="container text-center">
-      <!-- Clickable logo linking to home -->
       <a href="{% url 'home' %}">
         <img class="brand-logo mb-2" src="{% static 'images/vintech-logo.png' %}" alt="Vintech-Technologies Logo" style="max-width:100px;">
       </a>
@@ -59,8 +58,19 @@
 
   <!-- Main Content -->
   <main class="container my-5">
-    {% block content %}{% endblock %}
+    {% block content %}
+    {% endblock %}
   </main>
+
+  <!-- Advertisement Marquee at the Bottom -->
+  <div class="container-fluid py-3 ad-marquee">
+    <marquee behavior="scroll" direction="left" scrollamount="5">
+      <span>Ad 1: Special offer – Earn extra rewards with every deposit!</span> &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span>Ad 2: Upgrade your plan to unlock more earning opportunities.</span> &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span>Ad 3: Invite friends and earn commission instantly!</span> &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span>Ad 4: Join Vintech-Technologies today and start earning big!</span>
+    </marquee>
+  </div>
 
   <!-- Footer -->
   <footer class="bg-primary text-white text-center py-3">

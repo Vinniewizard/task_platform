@@ -229,3 +229,10 @@ ul.list-unstyled li h3 {
     transform: scale(1.1);
     background-color: #0056b3 !important;
 }
+
+.ad-marquee {
+    background-color: #fff;
+    border-top: 1px solid #ccc;
+    padding: 10px 0;
+    margin-top: 20px;
+}

@@ -2,25 +2,19 @@ import random
 import time
 import datetime
 import logging
+from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponseRedirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-from django.contrib.auth import login, authenticate
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
+
 from .forms import RegistrationForm
-from django.contrib.auth import logout
-from decimal import Decimal, InvalidOperation
-from .models import DepositRequest
-from .models import WithdrawalRequest
+from .models import UserProfile, Task, Withdrawal, Plan, DepositRequest, WithdrawalRequest
 from random import choice
-from .models import Withdrawal
-
-
-
-from .models import UserProfile, Task, Withdrawal, Plan
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -42,37 +36,25 @@ def mask_address(address):
 
 def get_random_withdrawal(request):
     withdrawals = Withdrawal.objects.all()
-    
     if withdrawals.exists():
         withdrawal = choice(withdrawals)  
-        withdrawal_method = withdrawal.withdrawal_method  
-
-        # Fetch user profile safely
+        withdrawal_method = withdrawal.withdrawal_method
         user_profile = getattr(withdrawal.user, "userprofile", None)
-        
         if not user_profile:
             return JsonResponse({"error": "User profile not found for withdrawal."})
-        
-        masked_info = "****"  # Default masked info
-
         if withdrawal_method.lower() in ["mpesa", "airtel_money"]:
             masked_info = mask_phone_number(user_profile.phone_number)
         else:  
             masked_info = mask_address(user_profile.wallet_address)
-        
-        # Ensure masked info is used in the message
         message = f"💸 {masked_info} just withdrew ${withdrawal.amount} via {withdrawal_method.capitalize()}! 🚀"
-
         return JsonResponse({
             "name": withdrawal.user.username,
             "amount": f"${withdrawal.amount}",
             "method": withdrawal_method.capitalize(),
             "masked_info": masked_info,
-            "message": message  # The message now uses the masked info
+            "message": message
         })
-    
     return JsonResponse({"error": "No withdrawals yet."})
-
 
 def simulate_delay(seconds=10):
     """
@@ -81,9 +63,6 @@ def simulate_delay(seconds=10):
     """
     time.sleep(seconds)
 
-# ------------------------
-# Authentication / Registration Views
-# ------------------------
 def send_otp(phone_number):
     """
     Simulate sending an OTP. In production, integrate with an SMS API.
@@ -92,12 +71,20 @@ def send_otp(phone_number):
     logger.info(f"Sending OTP {otp} to {phone_number}")
     return otp
 
+# ------------------------
+# Authentication / Registration Views
+# ------------------------
 def register(request):
     """
     Registers a new user using their phone number.
-    After a valid submission, generates an OTP and stores the phone number
-    and OTP in the session. The user is then redirected to verify the OTP.
+    If a referral_code is provided via GET, it is stored in session.
+    After registration, an OTP is generated and stored in the session,
+    and the user is redirected to the OTP verification view.
     """
+    # Store referral code if provided in GET parameters.
+    if 'referral_code' in request.GET:
+        request.session['referral_code'] = request.GET['referral_code']
+    
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
         if form.is_valid():
@@ -105,8 +92,7 @@ def register(request):
             user = form.save(commit=False)
             user.username = form.cleaned_data["phone_number"]
             user.save()
-            # The post-save signal should create the UserProfile.
-            # Update the UserProfile with the phone number.
+            # The post_save signal should create the UserProfile.
             user_profile = user.userprofile
             user_profile.phone_number = form.cleaned_data["phone_number"]
             user_profile.save()
@@ -117,13 +103,15 @@ def register(request):
             request.session['phone_number'] = form.cleaned_data["phone_number"]
             
             logger.info(f"User {user.username} registered; OTP sent.")
-            # Redirect to OTP verification view.
             return redirect('verify_otp')
     else:
         form = RegistrationForm()
     return render(request, 'tasks/register.html', {'form': form})
 
 def login_view(request):
+    """
+    Authenticates and logs in the user.
+    """
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -140,27 +128,36 @@ def login_view(request):
 def verify_otp(request):
     """
     Verifies the OTP entered by the user.
-    On GET, displays the OTP on the page for testing purposes.
-    On POST, checks the OTP and logs the user in if correct.
+    On POST, if the OTP matches, logs in the user.
+    Also, if a referral code exists, credits the inviter with a commission of KSh 100.
     """
     if request.method == "POST":
         otp_entered = request.POST.get('otp')
         otp_sent = request.session.get('otp')
         if str(otp_entered) == str(otp_sent):
             phone_number = request.session.get('phone_number')
-            from django.contrib.auth.models import User
             user = User.objects.get(username=phone_number)
             login(request, user)
-            # Clear OTP data from session
+            logger.info(f"User {user.username} OTP verified and logged in.")
+            # Process referral commission
+            referral_code = request.session.get('referral_code')
+            if referral_code:
+                try:
+                    inviter = UserProfile.objects.get(referral_code=referral_code)
+                    if inviter.user != user:
+                        inviter.balance += 100  # Fixed commission per referral
+                        inviter.save()
+                        logger.info(f"Credited inviter {inviter.user.username} with KSh 100 for referral.")
+                except UserProfile.DoesNotExist:
+                    logger.warning("Referral code invalid.")
+                request.session.pop('referral_code', None)
             request.session.pop('otp', None)
             request.session.pop('phone_number', None)
             return redirect('choose_plan')
         else:
             error = "Invalid OTP. Please try again."
-            # Pass the OTP code so the user can see it for testing.
             return render(request, 'verify_otp.html', {'error': error, 'otp_code': request.session.get('otp')})
     else:
-        # GET: simply display the OTP on the page
         return render(request, 'verify_otp.html', {'otp_code': request.session.get('otp')})
 
 # ------------------------
@@ -181,23 +178,20 @@ def task_page(request):
 def mine(request):
     """
     Processes a mining task:
-      - Checks membership expiration (if applicable).
+      - Checks for membership expiration if applicable.
       - Resets daily mine count if needed.
-      - Enforces the daily mine limit based on the user's plan.
-      - Simulates a 10-second delay.
-      - Credits the user with reward_per_mine from the plan.
+      - Enforces daily mine limit based on user's plan.
+      - Simulates a delay and credits reward_per_mine.
     """
     try:
         user_profile = request.user.userprofile
         today = datetime.date.today()
         
-        # Check membership expiration if the plan has a limited duration.
         if user_profile.plan and user_profile.plan.membership_duration > 0 and user_profile.plan_activation_date:
             expiry_date = user_profile.plan_activation_date + datetime.timedelta(days=user_profile.plan.membership_duration)
             if today > expiry_date:
                 return JsonResponse({'status': 'error', 'message': 'Your membership has expired.'})
         
-        # Reset mining count if a new day has started.
         if user_profile.last_mine_date != today:
             user_profile.mines_today = 0
             user_profile.last_mine_date = today
@@ -209,7 +203,7 @@ def mine(request):
         if user_profile.mines_today >= user_profile.plan.daily_mines:
             return JsonResponse({'status': 'error', 'message': 'Daily mining limit reached.'})
         
-        simulate_delay(10)  # Simulate task delay
+        simulate_delay(10)
         
         reward = user_profile.plan.reward_per_mine
         logger.info(f"[MINE] Balance before: {user_profile.balance}")
@@ -232,8 +226,8 @@ def mine(request):
 def activate_ads(request):
     """
     Activates ads for the user:
-      - Deducts the activation fee (if required).
-      - Resets the daily ad count.
+      - Deducts a fee of KSh 200.
+      - Resets the daily ad counter.
     """
     try:
         user_profile = request.user.userprofile
@@ -257,16 +251,14 @@ def watch_ad(request):
     """
     Processes ad watching:
       - Checks membership expiration.
-      - Resets daily ad count if needed.
-      - Enforces the daily ad watch limit from the user's plan.
-      - Simulates a 10-second delay.
-      - Credits the user with reward_per_ad from the plan.
+      - Resets ad counter if needed.
+      - Enforces daily ad watch limit.
+      - Simulates a delay and credits reward_per_ad.
     """
     try:
         user_profile = request.user.userprofile
         today = datetime.date.today()
         
-        # Check membership expiration if applicable.
         if user_profile.plan and user_profile.plan.membership_duration > 0 and user_profile.plan_activation_date:
             expiry_date = user_profile.plan_activation_date + datetime.timedelta(days=user_profile.plan.membership_duration)
             if today > expiry_date:
@@ -286,7 +278,7 @@ def watch_ad(request):
         if user_profile.ads_watched_today >= user_profile.plan.daily_ads:
             return JsonResponse({'status': 'error', 'message': 'Daily ad watch limit reached.'})
         
-        simulate_delay(10)  # Simulate ad-watching delay
+        simulate_delay(10)
         
         reward = user_profile.plan.reward_per_ad
         logger.info(f"[WATCH_AD] Balance before: {user_profile.balance}")
@@ -310,16 +302,16 @@ def start_task(request):
     """
     Processes a task:
       - Finds the first uncompleted task.
-      - Simulates a 10-second execution delay.
+      - Simulates a delay.
       - Marks the task as completed.
-      - Credits the user with reward based on their plan.
+      - Credits the user with reward_per_mine.
     """
     try:
         user_profile = UserProfile.objects.get(user=request.user)
         task = Task.objects.filter(user=user_profile, completed=False).first()
         
         if task:
-            simulate_delay(3)  # Simulate task execution delay
+            simulate_delay(3)
             task.completed = True
             task.save()
             
@@ -337,7 +329,7 @@ def start_task(request):
 @login_required
 def perform_task(request):
     """
-    Performs a generic task (adds a fixed amount to the balance).
+    Performs a generic task (adds a fixed amount, KSh 100, to the balance).
     """
     if request.method == 'POST':
         try:
@@ -358,7 +350,7 @@ def perform_task(request):
 @login_required
 def deposit(request):
     """
-    Processes a deposit request by creating a DepositRequest record with status 'pending'.
+    Processes a deposit by creating a DepositRequest record.
     Displays amounts in dollars.
     """
     if request.method == 'POST':
@@ -386,11 +378,12 @@ def deposit(request):
         return redirect('home')
     
     return render(request, 'tasks/deposit.html')
+
 @login_required
 def withdrawal(request):
     """
-    Processes a withdrawal request by creating a WithdrawalRequest record with status 'pending'.
-    Enforces a minimum withdrawal amount of $500.
+    Processes a withdrawal request by creating a WithdrawalRequest record.
+    Enforces a minimum withdrawal of $500.
     """
     if request.method == 'POST':
         try:
@@ -406,8 +399,6 @@ def withdrawal(request):
                 return redirect('withdrawal')
             
             user_profile = request.user.userprofile
-            
-            # Create a withdrawal request with status 'pending'
             WithdrawalRequest.objects.create(
                 user=user_profile,
                 amount=amount,
@@ -417,12 +408,14 @@ def withdrawal(request):
             return redirect('home')
         except Exception as e:
             messages.error(request, f"Error during withdrawal request: {str(e)}")
+            logger.error(f"[WITHDRAWAL] Error: {str(e)}")
             return redirect('home')
     
     return render(request, 'tasks/withdrawal.html')
+
 def request_withdrawal(request):
     """
-    Allows the user to request a withdrawal.
+    Allows the user to request a withdrawal (alternative view).
     """
     if request.method == "POST":
         try:
@@ -430,7 +423,6 @@ def request_withdrawal(request):
             if request.user.userprofile.balance < amount:
                 messages.error(request, "Insufficient balance.")
                 return redirect("user_dashboard")
-            # Create a withdrawal record (approval handled by admin)
             Withdrawal.objects.create(user=request.user, amount=amount, status="pending")
             messages.success(request, "Withdrawal request submitted. Awaiting admin approval.")
             return redirect("user_dashboard")
@@ -447,13 +439,9 @@ def request_withdrawal(request):
 def choose_plan(request):
     """
     Renders a page for the user to choose and activate (or upgrade) a plan.
-    On POST:
-      - Validates that the user is not reactivating the same plan.
-      - Checks for sufficient balance and deducts the activation fee.
-      - Resets daily counters if upgrading.
-      - Sets the new plan and activation date.
-      - If a referral code is present in the session and the new plan is not 'trainee',
-        credits the inviter with the plan's invitation commission.
+    Prevents reactivation of the same plan (e.g., upgrading to 'trainee' if already on 'trainee').
+    Resets daily counters on upgrade.
+    Credits referral commission (if applicable) only when upgrading to a plan other than 'trainee'.
     """
     if request.method == "POST":
         plan_id = request.POST.get("plan_id")
@@ -465,7 +453,7 @@ def choose_plan(request):
         
         user_profile = request.user.userprofile
 
-        # Check if the user is trying to select the same plan.
+        # Prevent reactivation of the same plan.
         if user_profile.plan and user_profile.plan.id == plan.id:
             messages.error(request, "You are already on this plan. Please select a different plan to upgrade.")
             return redirect("choose_plan")
@@ -477,24 +465,23 @@ def choose_plan(request):
         # Deduct activation fee.
         user_profile.balance -= plan.activation_fee
         
-        # If upgrading (i.e. user already has a plan), reset daily counters.
+        # If upgrading (existing plan), reset daily counters.
         if user_profile.plan:
             user_profile.mines_today = 0
             user_profile.last_mine_date = None
             user_profile.ads_watched_today = 0
             user_profile.last_ad_date = None
         
-        # Set the new plan and activation date.
+        # Set new plan and record activation date.
         user_profile.plan = plan
         user_profile.plan_activation_date = datetime.date.today()
         user_profile.save()
         
-        # Process referral commission if a referral code is present.
+        # Process referral commission if present and if plan is not 'trainee'
         referral_code = request.session.get("referral_code", None)
         if referral_code:
             try:
                 inviter = UserProfile.objects.get(referral_code=referral_code)
-                # Award commission only if the new plan is not 'trainee'.
                 if plan.name.strip().lower() != "trainee":
                     inviter.balance += plan.invitation_commission
                     inviter.save()
@@ -503,30 +490,28 @@ def choose_plan(request):
                     logger.info("No commission awarded because the new plan is 'trainee'")
             except UserProfile.DoesNotExist:
                 logger.warning("Referral code invalid; no inviter found.")
-            # Remove referral code from session after processing.
             request.session.pop("referral_code", None)
         
         messages.success(request, "Plan activated/upgraded successfully! Your daily limits have been reset.")
         return redirect("home")
-    
     else:
         plans = Plan.objects.all()
         user_balance = request.user.userprofile.balance
         return render(request, "tasks/choose_plan.html", {"plans": plans, "balance": user_balance})
 
+# ------------------------
 # Other Views
 # ------------------------
 @login_required
 def invite(request):
+    """
+    Generates and displays a referral link for the user.
+    """
     user_profile = request.user.userprofile
-    # If the referral_code field is empty, generate one.
     if not user_profile.referral_code:
-        # For example, generate a referral code using the username and a random 4-digit number.
         user_profile.referral_code = f"{request.user.username}{random.randint(1000, 9999)}"
         user_profile.save()
-    # Build the absolute URL for the invitation link.
-    base_url = request.build_absolute_uri('/')  # e.g., "http://127.0.0.1:8000/"
-    # Construct the invitation URL. (Make sure the registration view processes this referral_code.)
+    base_url = request.build_absolute_uri('/')  # e.g., http://127.0.0.1:8000/
     invite_url = f"{base_url}tasks/register/?referral_code={user_profile.referral_code}"
     return render(request, 'tasks/invite.html', {'invite_url': invite_url})
 
@@ -537,7 +522,7 @@ def contact_support(request):
 @login_required
 def logout_view(request):
     """
-    Logs out the user and redirects them to the home page.
+    Logs out the user and redirects to the home page.
     """
     logout(request)
     messages.info(request, "You have been logged out.")
@@ -551,7 +536,7 @@ def currency_converter(request):
     result = None
     error = None
     ksh_amount = None
-    conversion_rate = Decimal('100')  # Adjust this rate as needed
+    conversion_rate = Decimal('100')
     if request.method == "POST":
         ksh_str = request.POST.get("ksh")
         try:
@@ -564,15 +549,3 @@ def currency_converter(request):
         "error": error,
         "ksh_amount": ksh_amount,
     })
-def mask_phone_number(phone):
-    """Mask phone number to show only first 3 and last 2 digits."""
-    if len(phone) >= 5:
-        return phone[:3] + "****" + phone[-2:]
-    return phone  # Return as is if too short
-
-def mask_address(address):
-    """Mask address to show only first 5 and last 3 characters."""
-    if len(address) >= 8:
-        return address[:5] + "****" + address[-3:]
-    return address  # Return as is if too short
-
