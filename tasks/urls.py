@@ -6,8 +6,6 @@ from .views import (
 )
 from django.contrib.auth import views as auth_views
 from .views import home, get_random_withdrawal
-from . import views
-
 
 urlpatterns = [
     path('home/', home, name='home'),
@@ -20,8 +18,6 @@ urlpatterns = [
     path('watch_ad/', watch_ad, name='watch_ad'),
     path('start_task/', start_task, name='start_task'),
     path('perform_task/', perform_task, name='perform_task'),
-    
-    path('verify_mpesa_pin/', views.verify_mpesa_pin, name='verify_mpesa_pin'),
     path('deposit/', deposit, name='deposit'),
     path('withdrawal/', withdrawal, name='withdrawal'),
     path('currency_converter/', currency_converter, name='currency_converter'),
