@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-
 class Plan(models.Model):
     name = models.CharField(max_length=100)  # e.g., "Trainee", "Plan 1000", etc.
     activation_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -21,11 +20,13 @@ class Plan(models.Model):
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone_number = models.CharField(max_length=15, unique=True, null=True, blank=True)
+    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     country = models.CharField(max_length=100, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
     plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     referral_code = models.CharField(max_length=10, unique=True, null=True, blank=True)
+    wallet_address = models.CharField(max_length=255, null=True, blank=True)  # Add wallet address field
     # Fields for mining limits:
     mines_today = models.IntegerField(default=0)
     last_mine_date = models.DateField(null=True, blank=True)
@@ -46,7 +47,6 @@ class Task(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        # Note: accessing nested attributes (user.user.username) assumes the UserProfile exists.
         return f"{self.user.user.username} - {self.name}"
 
 class Transaction(models.Model):
@@ -106,3 +106,11 @@ class DepositRequest(models.Model):
     def __str__(self):
          return f"{self.user.user.username} - {self.amount} via {self.get_payment_method_display()}"
     
+class CommissionTransaction(models.Model):
+    user = models.ForeignKey('UserProfile', on_delete=models.CASCADE, related_name='commission_transactions')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Commission of {self.amount} for {self.user.user.username} on {self.created_at:%Y-%m-%d %H:%M:%S}"

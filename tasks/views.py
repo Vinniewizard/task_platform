@@ -3,6 +3,7 @@ import time
 import datetime
 import logging
 from decimal import Decimal, InvalidOperation
+from random import choice
 
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponseRedirect
@@ -11,10 +12,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
+from django.contrib.auth import update_session_auth_hash
+from .forms import UserUpdateForm, ProfileUpdateForm, CustomPasswordChangeForm
 
 from .forms import RegistrationForm
-from .models import UserProfile, Task, Withdrawal, Plan, DepositRequest, WithdrawalRequest
-from random import choice
+from .models import (
+    UserProfile, Task, Withdrawal, Plan, 
+    DepositRequest, WithdrawalRequest, CommissionTransaction
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -32,13 +37,11 @@ def mask_phone_number(phone):
         return masked
     return phone_str
 
- 
-
 def mask_address(address):
     """Mask address to show only first 5 and last 3 characters."""
     if address and len(address) >= 8:
         return address[:5] + "****" + address[-3:]
-    return address  
+    return address
 
 def get_random_withdrawal(request):
     withdrawals = Withdrawal.objects.all()
@@ -49,7 +52,6 @@ def get_random_withdrawal(request):
         
         # Fetch user profile safely
         user_profile = getattr(withdrawal.user, "userprofile", None)
-        
         if not user_profile:
             return JsonResponse({"error": "User profile not found for withdrawal."})
         
@@ -59,9 +61,7 @@ def get_random_withdrawal(request):
         else:
             masked_info = mask_address(user_profile.wallet_address)
         
-        # Build the message using the masked info.
         message = f"💸 <b>{masked_info}</b> just withdrew <b>${withdrawal.amount}</b> via <b>{withdrawal_method.capitalize()}</b>! 🚀"
-
         return JsonResponse({
             "name": withdrawal.user.username,
             "amount": f"${withdrawal.amount}",
@@ -71,7 +71,6 @@ def get_random_withdrawal(request):
         })
     
     return JsonResponse({"error": "No withdrawals yet."})
-
 
 def simulate_delay(seconds=10):
     """
@@ -94,18 +93,16 @@ def send_otp(phone_number):
 def register(request):
     """
     Registers a new user using their phone number.
-    If a referral_code is provided via GET, it is stored in session.
+    If a referral_code is provided via GET, it is stored in the session.
     After registration, an OTP is generated and stored in the session,
     and the user is redirected to the OTP verification view.
     """
-    # Store referral code if provided in GET parameters.
     if 'referral_code' in request.GET:
         request.session['referral_code'] = request.GET['referral_code']
     
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            # Save user using the custom form.
             user = form.save(commit=False)
             user.username = form.cleaned_data["phone_number"]
             user.save()
@@ -114,7 +111,6 @@ def register(request):
             user_profile.phone_number = form.cleaned_data["phone_number"]
             user_profile.save()
             
-            # Generate OTP and store in session.
             otp = send_otp(form.cleaned_data["phone_number"])
             request.session['otp'] = otp
             request.session['phone_number'] = form.cleaned_data["phone_number"]
@@ -156,7 +152,6 @@ def verify_otp(request):
             user = User.objects.get(username=phone_number)
             login(request, user)
             logger.info(f"User {user.username} OTP verified and logged in.")
-            # Process referral commission
             referral_code = request.session.get('referral_code')
             if referral_code:
                 try:
@@ -503,6 +498,11 @@ def choose_plan(request):
                     inviter.balance += plan.invitation_commission
                     inviter.save()
                     logger.info(f"Commission of {plan.invitation_commission} awarded to inviter {inviter.user.username}")
+                    CommissionTransaction.objects.create(
+                        user=inviter,
+                        amount=plan.invitation_commission,
+                        description=f"Referral commission awarded for plan activation by a referred user."
+                    )
                 else:
                     logger.info("No commission awarded because the new plan is 'trainee'")
             except UserProfile.DoesNotExist:
@@ -521,9 +521,6 @@ def choose_plan(request):
 # ------------------------
 @login_required
 def invite(request):
-    """
-    Generates and displays a referral link for the user.
-    """
     user_profile = request.user.userprofile
     if not user_profile.referral_code:
         user_profile.referral_code = f"{request.user.username}{random.randint(1000, 9999)}"
@@ -532,7 +529,7 @@ def invite(request):
     invite_url = f"{base_url}tasks/register/?referral_code={user_profile.referral_code}"
     return render(request, 'tasks/invite.html', {'invite_url': invite_url})
 
-@login_required
+
 def contact_support(request):
     return render(request, 'tasks/contact_support.html')
 
@@ -566,3 +563,38 @@ def currency_converter(request):
         "error": error,
         "ksh_amount": ksh_amount,
     })
+@login_required
+def user_settings(request):
+    user_profile = request.user.profile  # Assuming the user has a related profile model
+
+    if request.method == 'POST':
+        # If the form is submitted
+        username = request.POST.get('username')
+        phone_number = request.POST.get('phone_number')
+        password = request.POST.get('password')
+        profile_picture = request.FILES.get('profile_picture')
+
+        # Update username
+        if username:
+            user_profile.user.username = username
+            user_profile.user.save()
+
+        # Update phone number
+        if phone_number:
+            user_profile.phone_number = phone_number
+            user_profile.save()
+
+        # Update password
+        if password:
+            user_profile.user.set_password(password)
+            user_profile.user.save()
+
+        # Update profile picture
+        if profile_picture:
+            user_profile.profile_picture = profile_picture
+            user_profile.save()
+
+        messages.success(request, 'Your profile has been updated successfully!')
+        return redirect('user_settings')
+
+    return render(request, 'tasks/user_settings.html', {'user': request.user})

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>User Settings</h2>
+
+<!-- Display Messages -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<!-- Profile Update Form -->
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <h3>Update Profile</h3>
+    {{ user_form.as_p }}
+    {{ profile_form.as_p }}
+    <button type="submit" name="update_profile">Save Changes</button>
+</form>
+
+<hr>
+
+<!-- Password Change Form -->
+<form method="POST">
+    {% csrf_token %}
+    <h3>Change Password</h3>
+    {{ password_form.as_p }}
+    <button type="submit" name="change_password">Update Password</button>
+</form>
+
+{% endblock %}

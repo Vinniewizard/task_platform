@@ -1,11 +1,10 @@
 from django.contrib import admin
 
 # Register your models here.
-from django.contrib import admin
+
 from .models import UserProfile, Task, Transaction, Plan
-from django.contrib import admin
 from .models import Withdrawal
-from django.contrib import admin
+
 from .models import DepositRequest
 from .models import WithdrawalRequest
 
