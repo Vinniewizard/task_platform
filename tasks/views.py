@@ -23,10 +23,16 @@ logger = logging.getLogger(__name__)
 # Helper Functions
 # ------------------------
 def mask_phone_number(phone):
-    """Mask phone number to show only first 3 and last 2 digits."""
-    if phone and len(phone) >= 5:
-        return phone[:3] + "****" + phone[-2:]
-    return phone  
+    """Mask phone number to show only the first 3 and last 2 digits."""
+    phone_str = str(phone)
+    logger.info(f"mask_phone_number called for: {phone_str}")
+    if phone_str and len(phone_str) >= 5:
+        masked = phone_str[:3] + "****" + phone_str[-2:]
+        logger.info(f"Masked phone: {masked}")
+        return masked
+    return phone_str
+
+ 
 
 def mask_address(address):
     """Mask address to show only first 5 and last 3 characters."""
@@ -36,17 +42,26 @@ def mask_address(address):
 
 def get_random_withdrawal(request):
     withdrawals = Withdrawal.objects.all()
+    
     if withdrawals.exists():
-        withdrawal = choice(withdrawals)  
+        withdrawal = choice(withdrawals)
         withdrawal_method = withdrawal.withdrawal_method
+        
+        # Fetch user profile safely
         user_profile = getattr(withdrawal.user, "userprofile", None)
+        
         if not user_profile:
             return JsonResponse({"error": "User profile not found for withdrawal."})
+        
+        # Use masked info based on the withdrawal method.
         if withdrawal_method.lower() in ["mpesa", "airtel_money"]:
             masked_info = mask_phone_number(user_profile.phone_number)
-        else:  
+        else:
             masked_info = mask_address(user_profile.wallet_address)
-        message = f"💸 {masked_info} just withdrew ${withdrawal.amount} via {withdrawal_method.capitalize()}! 🚀"
+        
+        # Build the message using the masked info.
+        message = f"💸 <b>{masked_info}</b> just withdrew <b>${withdrawal.amount}</b> via <b>{withdrawal_method.capitalize()}</b>! 🚀"
+
         return JsonResponse({
             "name": withdrawal.user.username,
             "amount": f"${withdrawal.amount}",
@@ -54,7 +69,9 @@ def get_random_withdrawal(request):
             "masked_info": masked_info,
             "message": message
         })
+    
     return JsonResponse({"error": "No withdrawals yet."})
+
 
 def simulate_delay(seconds=10):
     """
