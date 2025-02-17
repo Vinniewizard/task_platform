@@ -12,10 +12,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
-from django.contrib.auth import update_session_auth_hash
-from .forms import UserUpdateForm, ProfileUpdateForm, CustomPasswordChangeForm
-from twilio.rest import Client
-from .models import Deposit
 
 from .forms import RegistrationForm
 from .models import (
@@ -531,7 +527,7 @@ def invite(request):
     invite_url = f"{base_url}tasks/register/?referral_code={user_profile.referral_code}"
     return render(request, 'tasks/invite.html', {'invite_url': invite_url})
 
-
+@login_required
 def contact_support(request):
     return render(request, 'tasks/contact_support.html')
 
@@ -565,72 +561,3 @@ def currency_converter(request):
         "error": error,
         "ksh_amount": ksh_amount,
     })
-@login_required
-def user_settings(request):
-    user_profile = request.user.profile  # Assuming the user has a related profile model
-
-    if request.method == 'POST':
-        # If the form is submitted
-        username = request.POST.get('username')
-        phone_number = request.POST.get('phone_number')
-        password = request.POST.get('password')
-        profile_picture = request.FILES.get('profile_picture')
-
-        # Update username
-        if username:
-            user_profile.user.username = username
-            user_profile.user.save()
-
-        # Update phone number
-        if phone_number:
-            user_profile.phone_number = phone_number
-            user_profile.save()
-
-        # Update password
-        if password:
-            user_profile.user.set_password(password)
-            user_profile.user.save()
-
-        # Update profile picture
-        if profile_picture:
-            user_profile.profile_picture = profile_picture
-            user_profile.save()
-
-        messages.success(request, 'Your profile has been updated successfully!')
-        return redirect('user_settings')
-
-    return render(request, 'tasks/user_settings.html', {'user': request.user})
-
-# Twilio setup
-account_sid = 'your_account_sid'
-auth_token = 'your_auth_token'
-client = Client(account_sid, auth_token)
-
-# Function to send SMS (using Twilio as an example)
-def send_sms(phone_number, message):
-    client.messages.create(
-        body=message,
-        from_='your_twilio_phone_number',
-        to=phone_number
-    )
-
-
-
-@login_required
-def verify_mpesa_pin(request):
-    if request.method == 'POST':
-        entered_pin = request.POST.get('pin')
-        otp = request.session.get('otp')
-
-        if entered_pin == str(otp):
-            # Mark deposit as verified
-            deposit = Deposit.objects.filter(user=request.user, mpesa_pin_verified=False).last()
-            deposit.mpesa_pin_verified = True
-            deposit.save()
-
-            return JsonResponse({'success': True, 'message': 'Deposit successful.'})
-        else:
-            return JsonResponse({'success': False, 'message': 'Invalid MPesa PIN.'})
-
-    return JsonResponse({'success': False, 'message': 'Invalid request.'})
-
