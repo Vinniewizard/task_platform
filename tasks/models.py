@@ -114,3 +114,8 @@ class CommissionTransaction(models.Model):
 
     def __str__(self):
         return f"Commission of {self.amount} for {self.user.user.username} on {self.created_at:%Y-%m-%d %H:%M:%S}"
+class Deposit(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    mpesa_pin_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)

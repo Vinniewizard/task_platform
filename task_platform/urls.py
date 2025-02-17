@@ -22,5 +22,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.home, name='home'),  # Add this line
     path('tasks/', include('tasks.urls')),  # Your existing task URLs
+    path('api/', include('tasks.urls')),
     
 ]

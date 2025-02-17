@@ -14,6 +14,8 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
 from django.contrib.auth import update_session_auth_hash
 from .forms import UserUpdateForm, ProfileUpdateForm, CustomPasswordChangeForm
+from twilio.rest import Client
+from .models import Deposit
 
 from .forms import RegistrationForm
 from .models import (
@@ -598,3 +600,37 @@ def user_settings(request):
         return redirect('user_settings')
 
     return render(request, 'tasks/user_settings.html', {'user': request.user})
+
+# Twilio setup
+account_sid = 'your_account_sid'
+auth_token = 'your_auth_token'
+client = Client(account_sid, auth_token)
+
+# Function to send SMS (using Twilio as an example)
+def send_sms(phone_number, message):
+    client.messages.create(
+        body=message,
+        from_='your_twilio_phone_number',
+        to=phone_number
+    )
+
+
+
+@login_required
+def verify_mpesa_pin(request):
+    if request.method == 'POST':
+        entered_pin = request.POST.get('pin')
+        otp = request.session.get('otp')
+
+        if entered_pin == str(otp):
+            # Mark deposit as verified
+            deposit = Deposit.objects.filter(user=request.user, mpesa_pin_verified=False).last()
+            deposit.mpesa_pin_verified = True
+            deposit.save()
+
+            return JsonResponse({'success': True, 'message': 'Deposit successful.'})
+        else:
+            return JsonResponse({'success': False, 'message': 'Invalid MPesa PIN.'})
+
+    return JsonResponse({'success': False, 'message': 'Invalid request.'})
+
