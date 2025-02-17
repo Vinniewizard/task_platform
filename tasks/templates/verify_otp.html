@@ -11,7 +11,7 @@
       Your OTP code is: <strong>{{ otp_code }}</strong>
     </div>
   {% endif %}
-  <p>Please enter the OTP code shown above (or received via SMS in production):</p>
+  <p>Please enter the OTP code shown above :</p>
   <form method="POST">
     {% csrf_token %}
     <div class="form-group">

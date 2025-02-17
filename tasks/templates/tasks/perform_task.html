@@ -127,14 +127,14 @@
           updateBalance(data.balance);
           
           // Start 10-second countdown
-          let seconds = 10;
-          countdownDisplay.textContent = "Please wait " + seconds + " seconds before mining again...";
-          let countdownInterval = setInterval(() => {
+          let seconds = 100;
+          countDisplay.textContent = "Please wait " + seconds + " seconds before mining again...";
+          let countInterval = setInterval(() => {
             seconds--;
-            countdownDisplay.textContent = "Please wait " + seconds + " seconds before mining again...";
+            countDisplay.textContent = "Please wait " + seconds + " seconds before mining again...";
             if (seconds <= 0) {
               clearInterval(countdownInterval);
-              countdownDisplay.textContent = "";
+              countDisplay.textContent = "";
               button.disabled = false;
             }
           }, 1000);

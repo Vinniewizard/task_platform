@@ -6,7 +6,7 @@
   <form method="POST" id="withdrawalForm">
       {% csrf_token %}
       <div class="form-group">
-          <label for="amount">Withdrawal Amount (Minimum $50, must not exceed your balance,@{{user.username}} enjoy instant withdrawal):</label>
+          <label for="amount">Withdrawal Amount (Minimum $20,@{{user.username}} enjoy instant withdrawal):</label>
           <input type="number" step="0.01" name="amount" id="amount" class="form-control" required>
       </div>
       <div class="form-group">

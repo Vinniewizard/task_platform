@@ -74,7 +74,7 @@ def get_random_withdrawal(request):
     return JsonResponse({"error": "No withdrawals yet."})
 
 
-def simulate_delay(seconds=10):
+def simulate_delay(seconds=100):
     """
     Simulates a delay (e.g., for a downloading demo).
     WARNING: In production, avoid blocking calls like time.sleep().
@@ -154,7 +154,7 @@ def verify_otp(request):
             # Clear OTP data from session
             request.session.pop('otp', None)
             request.session.pop('phone_number', None)
-            return redirect('choose_plan')
+            return redirect('home')
         else:
             error = "Invalid OTP. Please try again."
             # Pass the OTP code so the user can see it for testing.
@@ -166,7 +166,7 @@ def verify_otp(request):
 # ------------------------
 # Dashboard / Home Views
 # ------------------------
-@login_required
+
 def home(request):
     return render(request, 'tasks/home.html', {'user': request.user})
 
@@ -401,8 +401,8 @@ def withdrawal(request):
                 messages.error(request, "Please enter a valid withdrawal amount.")
                 return redirect('withdrawal')
             
-            if amount < Decimal('500'):
-                messages.error(request, "Minimum withdrawal is $500.")
+            if amount < Decimal('20'):
+                messages.error(request, "Minimum withdrawal is $20.")
                 return redirect('withdrawal')
             
             user_profile = request.user.userprofile
