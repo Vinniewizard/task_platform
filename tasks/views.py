@@ -336,15 +336,21 @@ def start_task(request):
 
 @login_required
 def perform_task(request):
-    context = {
-        'balance': request.user.userprofile.balance,
-        'daily_mines': request.user.userprofile.plan.daily_mines if request.user.userprofile.plan else 0,
-        'mines_done': request.user.userprofile.mines_today,
-        'daily_ads': request.user.userprofile.plan.daily_ads if request.user.userprofile.plan else 0,
-        'ads_watched': request.user.userprofile.ads_watched_today,
-        'user': request.user,
-    }
-    return render(request, 'tasks/perform_task.html', context)
+    """
+    Performs a generic task (adds a fixed amount to the balance).
+    """
+    if request.method == 'POST':
+        try:
+            user_profile = request.user.userprofile
+            user_profile.balance += 100
+            user_profile.save()
+            logger.info(f"[PERFORM_TASK] Balance after performing task: {user_profile.balance}")
+            return redirect('home')
+        except Exception as e:
+            messages.error(request, f"Error performing task: {str(e)}")
+            logger.error(f"[PERFORM_TASK] Error: {str(e)}")
+            return redirect('home')
+    return render(request, 'tasks/perform_task.html')
 
 # ------------------------
 # Financial Views
