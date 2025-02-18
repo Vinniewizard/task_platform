@@ -74,7 +74,7 @@ def get_random_withdrawal(request):
     return JsonResponse({"error": "No withdrawals yet."})
 
 
-def simulate_delay(seconds=100):
+def simulate_delay(seconds=10):
     """
     Simulates a delay (e.g., for a downloading demo).
     WARNING: In production, avoid blocking calls like time.sleep().
@@ -154,7 +154,7 @@ def verify_otp(request):
             # Clear OTP data from session
             request.session.pop('otp', None)
             request.session.pop('phone_number', None)
-            return redirect('home')
+            return redirect('choose_plan')
         else:
             error = "Invalid OTP. Please try again."
             # Pass the OTP code so the user can see it for testing.
@@ -166,7 +166,7 @@ def verify_otp(request):
 # ------------------------
 # Dashboard / Home Views
 # ------------------------
-
+@login_required
 def home(request):
     return render(request, 'tasks/home.html', {'user': request.user})
 
@@ -179,44 +179,26 @@ def task_page(request):
 # ------------------------
 @login_required
 def mine(request):
-    """
-    Processes a mining task:
-      - Checks membership expiration (if applicable).
-      - Resets daily mine count if needed.
-      - Enforces the daily mine limit based on the user's plan.
-      - Simulates a 10-second delay.
-      - Credits the user with reward_per_mine from the plan.
-    """
     try:
         user_profile = request.user.userprofile
         today = datetime.date.today()
         
-        # Check membership expiration if the plan has a limited duration.
-        if user_profile.plan and user_profile.plan.membership_duration > 0 and user_profile.plan_activation_date:
-            expiry_date = user_profile.plan_activation_date + datetime.timedelta(days=user_profile.plan.membership_duration)
-            if today > expiry_date:
-                return JsonResponse({'status': 'error', 'message': 'Your membership has expired.'})
-        
-        # Reset mining count if a new day has started.
+        # Reset daily counter if it's a new day
         if user_profile.last_mine_date != today:
             user_profile.mines_today = 0
             user_profile.last_mine_date = today
-            user_profile.save()
         
-        if not user_profile.plan:
-            return JsonResponse({'status': 'error', 'message': 'No plan assigned. Please choose a plan.'})
-        
-        if user_profile.mines_today >= user_profile.plan.daily_mines:
+        # Check if daily limit is reached
+        if user_profile.plan and user_profile.mines_today >= user_profile.plan.daily_mines:
             return JsonResponse({'status': 'error', 'message': 'Daily mining limit reached.'})
         
         simulate_delay(10)  # Simulate task delay
         
+        # Increment counter and update balance
         reward = user_profile.plan.reward_per_mine
-        logger.info(f"[MINE] Balance before: {user_profile.balance}")
         user_profile.balance += reward
-        user_profile.mines_today += 1
-        user_profile.save()
-        logger.info(f"[MINE] Balance after: {user_profile.balance}")
+        user_profile.mines_today += 1  # Increment counter
+        user_profile.save()  # Save changes to the database
         
         return JsonResponse({
             'status': 'success',
@@ -254,46 +236,26 @@ def activate_ads(request):
 
 @login_required
 def watch_ad(request):
-    """
-    Processes ad watching:
-      - Checks membership expiration.
-      - Resets daily ad count if needed.
-      - Enforces the daily ad watch limit from the user's plan.
-      - Simulates a 10-second delay.
-      - Credits the user with reward_per_ad from the plan.
-    """
     try:
         user_profile = request.user.userprofile
         today = datetime.date.today()
         
-        # Check membership expiration if applicable.
-        if user_profile.plan and user_profile.plan.membership_duration > 0 and user_profile.plan_activation_date:
-            expiry_date = user_profile.plan_activation_date + datetime.timedelta(days=user_profile.plan.membership_duration)
-            if today > expiry_date:
-                return JsonResponse({'status': 'error', 'message': 'Your membership has expired.'})
-        
+        # Reset daily ads if it's a new day
         if user_profile.last_ad_date != today:
             user_profile.ads_watched_today = 0
             user_profile.last_ad_date = today
-            user_profile.save()
         
-        if not user_profile.plan:
-            return JsonResponse({'status': 'error', 'message': 'No plan assigned. Please choose a plan.'})
-        
-        if not user_profile.ads_activated:
-            return JsonResponse({'status': 'error', 'message': 'Ads not activated. Please activate ads.'})
-        
-        if user_profile.ads_watched_today >= user_profile.plan.daily_ads:
+        # Check if daily ad watch limit is reached
+        if user_profile.plan and user_profile.ads_watched_today >= user_profile.plan.daily_ads:
             return JsonResponse({'status': 'error', 'message': 'Daily ad watch limit reached.'})
         
         simulate_delay(10)  # Simulate ad-watching delay
         
+        # Increment counter and update balance
         reward = user_profile.plan.reward_per_ad
-        logger.info(f"[WATCH_AD] Balance before: {user_profile.balance}")
         user_profile.balance += reward
-        user_profile.ads_watched_today += 1
-        user_profile.save()
-        logger.info(f"[WATCH_AD] Balance after: {user_profile.balance}")
+        user_profile.ads_watched_today += 1  # Increment counter
+        user_profile.save()  # Save changes to the database
         
         return JsonResponse({
             'status': 'success',
@@ -396,8 +358,8 @@ def withdrawal(request):
                 messages.error(request, "Please enter a valid withdrawal amount.")
                 return redirect('withdrawal')
             
-            if amount < Decimal('20'):
-                messages.error(request, "Minimum withdrawal is $20.")
+            if amount < Decimal('500'):
+                messages.error(request, "Minimum withdrawal is $500.")
                 return redirect('withdrawal')
             
             user_profile = request.user.userprofile
