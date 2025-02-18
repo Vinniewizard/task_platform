@@ -241,6 +241,13 @@ def mine(request):
         user_profile.balance += reward
         user_profile.mines_today += 1  # Increment counter
         user_profile.save()  # Save changes to the database
+
+          # Create a transaction record
+        Transaction.objects.create(
+            user=user_profile,
+            amount=reward,
+            description="Mining reward"
+        )
         
         return JsonResponse({
             'status': 'success',
@@ -298,6 +305,13 @@ def watch_ad(request):
         user_profile.balance += reward
         user_profile.ads_watched_today += 1  # Increment counter
         user_profile.save()  # Save changes to the database
+        
+        # Create a transaction record
+        Transaction.objects.create(
+            user=user_profile,
+            amount=reward,
+            description="Mining reward"
+        )
         
         return JsonResponse({
             'status': 'success',

@@ -59,6 +59,18 @@
   </style>
 </head>
 <body>
+<nav class="mt-2">
+   <!-- Action Buttons -->
+    <div class="container my-5">
+      <div class="row text-center">
+        <div class="col-md-4 mb-4">
+          <a href="{% url 'income_summary' %}" class="btn btn-lg btn-success btn-block py-3 action-btn">Income Summary</a>
+        </div><br>
+        <div class="col-md-4 mb-4">
+          <a href="{% url 'choose_plan' %}" class="btn btn-lg btn-danger btn-block py-3 action-btn">Upgrade new plan </a>
+        </div><br>
+    </div>
+</nav>
   <div class="container">
     <h1 class="my-3">Task Page</h1>
     <div class="task-container">
@@ -280,5 +292,10 @@
       }
     {% endif %}
   </script>
+
+  <div class="col-md-4 mb-4">
+          <a href="{% url 'home' %}" class="btn btn-lg btn-danger btn-block py-3 action-btn">Back to Dashboard </a>
+        </div><br>
+
 </body>
 </html>
