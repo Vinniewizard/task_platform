@@ -96,7 +96,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('amount', models.DecimalField(decimal_places=2, max_digits=10)),
                 ('status', models.CharField(choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected')], default='pending', max_length=10)),
-                ('withdrawal_method', models.CharField(choices=[('mpesa', 'M-Pesa'), ('airtel_money', 'Airtel Money'), ('btc', 'BTC'), ('usdt', 'USDT'), ('binance', 'Binance')], default='mpesa', max_length=20)),
+                ('withdrawal_method', models.CharField(choices=[('mpesa', 'M-Pesa'), ('airtel_money', 'Airtel Money'), ('btc', 'BTC'), ('t', 'T'), ('binance', 'Binance')], default='mpesa', max_length=20)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],

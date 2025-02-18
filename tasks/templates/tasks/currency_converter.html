@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container my-5">
-  <h2>Currency Converter (KSh to USD)</h2>
+  <h2>Currency Converter (USD to )</h2>
   {% if error %}
     <div class="alert alert-danger">{{ error }}</div>
   {% endif %}
   <form method="POST">
       {% csrf_token %}
       <div class="form-group">
-          <label for="ksh">Amount in KSh:</label>
-          <input type="number" step="0.01" name="ksh" id="ksh" class="form-control" required>
+          <label for="USD">Amount in USD:</label>
+          <input type="number" step="0.01" name="USD" id="USD" class="form-control" required>
       </div>
       <button type="submit" class="btn btn-primary">Convert</button>
   </form>
   {% if result is not None %}
     <div class="alert alert-success mt-3">
-      {{ ksh_amount }} KSh is equivalent to ${{ result }} USD.
+      {{ USD_amount }} USD is equivalent to ${{ result }} .
     </div>
   {% endif %}
 </div>

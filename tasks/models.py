@@ -80,7 +80,7 @@ class Withdrawal(models.Model):
         ('mpesa', 'M-Pesa'),
         ('airtel_money', 'Airtel Money'),
         ('btc', 'BTC'),
-        ('usdt', 'USDT'),
+        ('t', 'T'),
         ('binance', 'Binance'),
     ]
 

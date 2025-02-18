@@ -166,7 +166,7 @@ def verify_otp(request):
 # ------------------------
 # Dashboard / Home Views
 # ------------------------
-@login_required
+
 def home(request):
     return render(request, 'tasks/home.html', {'user': request.user})
 
@@ -502,24 +502,24 @@ def logout_view(request):
 
 def currency_converter(request):
     """
-    A simple view to convert an amount from KSh to USD.
-    Assumes a conversion rate of 1 USD = 100 KSh.
+    A simple view to convert an amount from USD to .
+    Assumes a conversion rate of 1  = 100 USD.
     """
     result = None
     error = None
-    ksh_amount = None
+    USD_amount = None
     conversion_rate = Decimal('100')  # Adjust this rate as needed
     if request.method == "POST":
-        ksh_str = request.POST.get("ksh")
+        USD_str = request.POST.get("USD")
         try:
-            ksh_amount = Decimal(ksh_str)
-            result = ksh_amount / conversion_rate
+            USD_amount = Decimal(USD_str)
+            result = USD_amount / conversion_rate
         except (InvalidOperation, TypeError):
-            error = "Please enter a valid amount in KSh."
+            error = "Please enter a valid amount in USD."
     return render(request, "tasks/currency_converter.html", {
         "result": result,
         "error": error,
-        "ksh_amount": ksh_amount,
+        "USD_amount": USD_amount,
     })
 def mask_phone_number(phone):
     """Mask phone number to show only first 3 and last 2 digits."""
