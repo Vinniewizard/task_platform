@@ -6,6 +6,7 @@ from .views import (
 )
 from django.contrib.auth import views as auth_views
 from .views import home, get_random_withdrawal
+from . import views
 
 urlpatterns = [
     path('home/', home, name='home'),
@@ -26,6 +27,7 @@ urlpatterns = [
     path('invite/', invite, name='invite'),
     path('contact_support/', contact_support, name='contact_support'),
     path('logout/', logout_view, name='logout'),
+    path('income-summary/', views.income_summary, name='income_summary'),
     path('get_random_withdrawal/', get_random_withdrawal, name='get_random_withdrawal'),
     path('password-reset/', auth_views.PasswordResetView.as_view(template_name='password_reset.html'), name='password_reset'),
     path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='password_reset_done.html'), name='password_reset_done'),

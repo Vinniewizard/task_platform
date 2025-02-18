@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5">
+    <h2 class="text-center mb-4">Income Summary</h2>
+
+    <div class="card shadow p-4">
+        <p><strong>Today's Income:</strong> KSh {{ today_income }}</p>
+        <p><strong>This Week's Income:</strong> KSh {{ week_income }}</p>
+        <p><strong>This Month's Income:</strong> KSh {{ month_income }}</p>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{% url 'home' %}" class="btn btn-primary">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

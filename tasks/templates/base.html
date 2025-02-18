@@ -33,6 +33,7 @@
         <a href="{% url 'invite' %}" class="text-white mx-2">Invite</a>
         <a href="{% url 'contact_support' %}" class="text-white mx-2">Contact Support</a>
         <a href="{% url 'currency_converter' %}" class="text-white mx-2">Converter</a>
+        <a href="{% url 'income_summary' %}" class="text-white mx-2">Income Summary</a>
         {% if user.is_authenticated %}
           <a href="{% url 'logout' %}" class="text-white mx-2">Logout</a>
         {% else %}

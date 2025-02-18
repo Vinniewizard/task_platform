@@ -17,6 +17,48 @@ from .models import DepositRequest
 from .models import WithdrawalRequest
 from random import choice
 from .models import Withdrawal
+from django.db.models import Sum
+from django.utils import timezone
+import datetime
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from .models import Transaction  # Ensure this model is correctly defined
+
+@login_required
+def income_summary(request):
+    user_profile = request.user.userprofile
+    now_time = timezone.now()
+    
+    # Start of today
+    today_start = now_time.replace(hour=0, minute=0, second=0, microsecond=0)
+    # Start of this week (assuming week starts on Monday)
+    week_start = today_start - datetime.timedelta(days=today_start.weekday())
+    # Start of this month
+    month_start = today_start.replace(day=1)
+    
+    # Sum transactions from the user's Transaction model.
+    # (Assumes that earning transactions are recorded as positive amounts.)
+    total_today = Transaction.objects.filter(
+        user=user_profile,
+        timestamp__gte=today_start
+    ).aggregate(total=Sum("amount"))["total"] or 0
+
+    total_week = Transaction.objects.filter(
+        user=user_profile,
+        timestamp__gte=week_start
+    ).aggregate(total=Sum("amount"))["total"] or 0
+
+    total_month = Transaction.objects.filter(
+        user=user_profile,
+        timestamp__gte=month_start
+    ).aggregate(total=Sum("amount"))["total"] or 0
+
+    context = {
+        'today_income': total_today,
+        'week_income': total_week,
+        'month_income': total_month,
+    }
+    return render(request, 'tasks/income_summary.html', context)
 
 
 
