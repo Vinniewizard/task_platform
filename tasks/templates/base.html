@@ -6,14 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vintech-Technologies Platform</title>
   
-  <!-- Bootstrap CSS from CDN -->
+  <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   
   <!-- Custom CSS -->
   <link rel="stylesheet" href="{% static 'css/styles.css' %}">
   
-  <!-- Inline fallback styling -->
   <style>
+    /* Inline fallback styling */
     body {
       background-color: #f8f9fa;
     }
@@ -43,7 +43,7 @@
     </div>
   </header>
 
-  <!-- Messages Block -->
+  <!-- Messages -->
   <div class="container mt-3">
     {% if messages %}
       {% for message in messages %}
@@ -63,7 +63,7 @@
     {% endblock %}
   </main>
 
-  <!-- Advertisement Marquee at the Bottom -->
+  <!-- Advertisement Marquee -->
   <div class="container-fluid py-3 ad-marquee">
     <marquee behavior="scroll" direction="left" scrollamount="4">
       <span>Ad 1: Special offer – Earn extra rewards with every deposit!</span> &nbsp;&nbsp;|&nbsp;&nbsp;
@@ -80,7 +80,7 @@
     </div>
   </footer>
 
-  <!-- jQuery and Bootstrap JS (full version) -->
+  <!-- jQuery and Bootstrap JS -->
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>

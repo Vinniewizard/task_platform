@@ -4,6 +4,35 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+# ---------------------------
+# CONSTANTS
+# ---------------------------
+PERIOD_CHOICES = [
+    ('daily', 'Daily'),
+    ('weekly', 'Weekly'),
+    ('monthly', 'Monthly'),
+    ('yearly', 'Yearly'),
+]
+
+# ---------------------------
+# EARNINGS RECORD
+# ---------------------------
+class EarningsRecord(models.Model):
+    user = models.ForeignKey('UserProfile', on_delete=models.CASCADE, related_name='earnings_records')
+    period_type = models.CharField(max_length=10, choices=PERIOD_CHOICES)
+    period_start = models.DateField()
+    period_end = models.DateField()
+    total_income = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    total_deposits = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    total_withdrawals = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.user.username} - {self.period_type.capitalize()} {self.period_start} to {self.period_end}"
+
+# ---------------------------
+# PLAN
+# ---------------------------
 class Plan(models.Model):
     name = models.CharField(max_length=100)  # e.g., "Trainee", "Plan 1000", etc.
     activation_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -17,6 +46,9 @@ class Plan(models.Model):
     def __str__(self):
         return self.name
 
+# ---------------------------
+# USER PROFILE
+# ---------------------------
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone_number = models.CharField(max_length=15, unique=True, null=True, blank=True)
@@ -26,20 +58,22 @@ class UserProfile(models.Model):
     plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     referral_code = models.CharField(max_length=10, unique=True, null=True, blank=True)
-    wallet_address = models.CharField(max_length=255, null=True, blank=True)  # Add wallet address field
-    # Fields for mining limits:
+    wallet_address = models.CharField(max_length=255, null=True, blank=True)  # Wallet address field
+
+    # Daily task counters:
     mines_today = models.IntegerField(default=0)
     last_mine_date = models.DateField(null=True, blank=True)
-    # Fields for ads:
     ads_activated = models.BooleanField(default=False)
     ads_watched_today = models.IntegerField(default=0)
     last_ad_date = models.DateField(null=True, blank=True)
-    # Field to store the date the plan was activated (for membership expiration)
     plan_activation_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return self.user.username
 
+# ---------------------------
+# TASK
+# ---------------------------
 class Task(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
@@ -47,21 +81,31 @@ class Task(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
+        # Accessing the related User from UserProfile
         return f"{self.user.user.username} - {self.name}"
 
+# ---------------------------
+# TRANSACTION
+# ---------------------------
 class Transaction(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255)
     timestamp = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.user.user.username} - {self.amount} - {self.description}"
+
+# ---------------------------
+# WITHDRAWAL REQUEST
+# ---------------------------
 class WithdrawalRequest(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     ]
-    user = models.ForeignKey('UserProfile', on_delete=models.CASCADE)
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -69,13 +113,15 @@ class WithdrawalRequest(models.Model):
     def __str__(self):
         return f"{self.user.user.username} - {self.amount} ({self.status})"
 
+# ---------------------------
+# WITHDRAWAL
+# ---------------------------
 class Withdrawal(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     ]
-    
     WITHDRAWAL_METHODS = [
         ('mpesa', 'M-Pesa'),
         ('airtel_money', 'Airtel Money'),
@@ -83,52 +129,82 @@ class Withdrawal(models.Model):
         ('t', 'T'),
         ('binance', 'Binance'),
     ]
-
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     withdrawal_method = models.CharField(max_length=20, choices=WITHDRAWAL_METHODS, default='mpesa')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.user.username} - {self.amount} via {self.get_withdrawal_method_display()}"
+
+# ---------------------------
+# DEPOSIT REQUEST
+# ---------------------------
 class DepositRequest(models.Model):
     PAYMENT_METHOD_CHOICES = [
          ('binance', 'Binance'),
          ('mpesa', 'Safaricom M-Pesa'),
          ('airtel', 'Airtel Money'),
     ]
-    user = models.ForeignKey('UserProfile', on_delete=models.CASCADE)
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
-    reference = models.CharField(max_length=100, blank=True, null=True)  # optional transaction id
-    status = models.CharField(max_length=20, default='pending')  # pending, approved, rejected
+    reference = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=20, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
          return f"{self.user.user.username} - {self.amount} via {self.get_payment_method_display()}"
-    
+
+# ---------------------------
+# COMMISSION TRANSACTION
+# ---------------------------
 class CommissionTransaction(models.Model):
-    user = models.ForeignKey('UserProfile', on_delete=models.CASCADE, related_name='commission_transactions')
+    user = models.ForeignKey(
+        UserProfile,
+        on_delete=models.CASCADE,
+        related_name='commission_transactions'
+    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Commission of {self.amount} for {self.user.user.username} on {self.created_at:%Y-%m-%d %H:%M:%S}"
+# ---------------------------
+# DEPOSIT
+# ---------------------------
 class Deposit(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     mpesa_pin_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.user.username} - {self.amount}"
+
+# ---------------------------
+# VIRTUAL APP
+# ---------------------------
 class VirtualApp(models.Model):
     name = models.CharField(max_length=255)
     download_link = models.URLField()
-    reward = models.DecimalField(max_digits=10, decimal_places=2)  # Reward for downloading
+    reward = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.name
+
+# ---------------------------
+# AD
+# ---------------------------
 class Ad(models.Model):
     title = models.CharField(max_length=255)
     video_url = models.URLField()
-    reward = models.DecimalField(max_digits=10, decimal_places=2)  # Reward for watching
-    duration = models.IntegerField()  # Duration in seconds
+    reward = models.DecimalField(max_digits=10, decimal_places=2)
+    duration = models.IntegerField()  # in seconds
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title

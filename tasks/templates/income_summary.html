@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="container my-5">
+    <h2 class="text-center mb-4">Income Summary</h2>
+
+    <div class="card shadow p-4 mb-4">
+        <p><strong>Today's Income:</strong> KSh {{ today_income }}</p>
+        <p><strong>This Week's Income:</strong> KSh {{ week_income }}</p>
+        <p><strong>This Month's Income:</strong> KSh {{ month_income }}</p>
+    </div>
+
+    <!-- Line Chart for Earnings Over the Last 7 Days -->
+    <div class="mb-4">
+        <h3 class="text-center">Earnings Over the Last 7 Days</h3>
+        <canvas id="lineChart" width="400" height="200"></canvas>
+    </div>
+
+    <!-- Pie Chart for Income Distribution -->
+    <div>
+        <h3 class="text-center">Income Distribution</h3>
+        <canvas id="pieChart" width="400" height="200"></canvas>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{% url 'home' %}" class="btn btn-primary">Back to Dashboard</a>
+    </div>
+</div>
+
+<!-- Include Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Line Chart Setup
+  const ctxLine = document.getElementById('lineChart').getContext('2d');
+  const lineChart = new Chart(ctxLine, {
+      type: 'line',
+      data: {
+          labels: {{ labels|safe }},
+          datasets: [{
+              label: 'Daily Earnings (KSh)',
+              data: {{ earnings_data|safe }},
+              backgroundColor: 'rgba(54, 162, 235, 0.2)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+              borderWidth: 1,
+              fill: true,
+              tension: 0.4
+          }]
+      },
+      options: {
+          scales: {
+              y: {
+                  beginAtZero: true,
+                  ticks: {
+                      precision: 0
+                  }
+              }
+          }
+      }
+  });
+
+  // Pie Chart Setup
+  // For example, we'll compare today's income vs. the rest of this week's income.
+  const todayIncome = {{ today_income }};
+  const weekIncome = {{ week_income }};
+  const restOfWeek = weekIncome - todayIncome;
+  const ctxPie = document.getElementById('pieChart').getContext('2d');
+  const pieChart = new Chart(ctxPie, {
+      type: 'pie',
+      data: {
+          labels: ["Today's Income", "Rest of Week's Income"],
+          datasets: [{
+              data: [todayIncome, restOfWeek],
+              backgroundColor: [
+                  'rgba(75, 192, 192, 0.6)',
+                  'rgba(255, 205, 86, 0.6)'
+              ],
+              borderWidth: 1
+          }]
+      },
+      options: {
+          responsive: true,
+          plugins: {
+              legend: { position: 'top' },
+              title: { display: true, text: 'Income Distribution' }
+          }
+      }
+  });
+</script>
+{% endblock %}

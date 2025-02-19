@@ -3,66 +3,29 @@ import time
 import datetime
 import logging
 
+from decimal import Decimal, InvalidOperation
+
+from django.db.models import Sum
+from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponseRedirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-from django.contrib.auth import login, authenticate
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
+from django.contrib.admin.views.decorators import staff_member_required
+
 from .forms import RegistrationForm
-from django.contrib.auth import logout
-from decimal import Decimal, InvalidOperation
-from .models import DepositRequest
-from .models import WithdrawalRequest
-from random import choice
-from .models import Withdrawal
-from django.db.models import Sum
-from django.utils import timezone
-import datetime
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-from .models import Transaction  # Ensure this model is correctly defined
-
-@login_required
-def income_summary(request):
-    user_profile = request.user.userprofile
-    now_time = timezone.now()
-    
-    # Start of today
-    today_start = now_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    # Start of this week (assuming week starts on Monday)
-    week_start = today_start - datetime.timedelta(days=today_start.weekday())
-    # Start of this month
-    month_start = today_start.replace(day=1)
-    
-    # Sum transactions from the user's Transaction model.
-    # (Assumes that earning transactions are recorded as positive amounts.)
-    total_today = Transaction.objects.filter(
-        user=user_profile,
-        timestamp__gte=today_start
-    ).aggregate(total=Sum("amount"))["total"] or 0
-
-    total_week = Transaction.objects.filter(
-        user=user_profile,
-        timestamp__gte=week_start
-    ).aggregate(total=Sum("amount"))["total"] or 0
-
-    total_month = Transaction.objects.filter(
-        user=user_profile,
-        timestamp__gte=month_start
-    ).aggregate(total=Sum("amount"))["total"] or 0
-
-    context = {
-        'today_income': total_today,
-        'week_income': total_week,
-        'month_income': total_month,
-    }
-    return render(request, 'tasks/income_summary.html', context)
-
-
-
-from .models import UserProfile, Task, Withdrawal, Plan
+from .models import (
+    DepositRequest,
+    WithdrawalRequest,
+    Withdrawal,
+    Transaction,
+    UserProfile,
+    Task,
+    Plan,
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -83,89 +46,78 @@ def mask_address(address):
     return address  
 
 def get_random_withdrawal(request):
+    """Return a random withdrawal with masked user info."""
     withdrawals = Withdrawal.objects.all()
-    
     if withdrawals.exists():
-        withdrawal = choice(withdrawals)  
-        withdrawal_method = withdrawal.withdrawal_method  
-
-        # Fetch user profile safely
+        withdrawal = random.choice(withdrawals)
+        withdrawal_method = withdrawal.withdrawal_method
         user_profile = getattr(withdrawal.user, "userprofile", None)
-        
         if not user_profile:
             return JsonResponse({"error": "User profile not found for withdrawal."})
         
-        masked_info = "****"  # Default masked info
-
-        if withdrawal_method.lower() in ["mpesa", "airtel_money"]:
-            masked_info = mask_phone_number(user_profile.phone_number)
-        else:  
-            masked_info = mask_address(user_profile.wallet_address)
+        masked_info = (
+            mask_phone_number(user_profile.phone_number)
+            if withdrawal_method.lower() in ["mpesa", "airtel_money"]
+            else mask_address(user_profile.wallet_address)
+        )
         
-        # Ensure masked info is used in the message
-        message = f"💸 {masked_info} just withdrew ${withdrawal.amount} via {withdrawal_method.capitalize()}! 🚀"
-
+        message = (
+            f"💸 {masked_info} just withdrew ${withdrawal.amount} "
+            f"via {withdrawal_method.capitalize()}! 🚀"
+        )
         return JsonResponse({
             "name": withdrawal.user.username,
             "amount": f"${withdrawal.amount}",
             "method": withdrawal_method.capitalize(),
             "masked_info": masked_info,
-            "message": message  # The message now uses the masked info
+            "message": message,
         })
-    
     return JsonResponse({"error": "No withdrawals yet."})
-
 
 def simulate_delay(seconds=10):
     """
-    Simulates a delay (e.g., for a downloading demo).
-    WARNING: In production, avoid blocking calls like time.sleep().
+    Simulate a delay (e.g., for a demo).
+    WARNING: Avoid blocking calls like time.sleep() in production.
     """
     time.sleep(seconds)
 
-# ------------------------
-# Authentication / Registration Views
-# ------------------------
 def send_otp(phone_number):
-    """
-    Simulate sending an OTP. In production, integrate with an SMS API.
-    """
+    """Simulate sending an OTP. Replace with an SMS API in production."""
     otp = random.randint(100000, 999999)
     logger.info(f"Sending OTP {otp} to {phone_number}")
     return otp
 
+# ------------------------
+# Authentication / Registration Views
+# ------------------------
 def register(request):
     """
     Registers a new user using their phone number.
-    After a valid submission, generates an OTP and stores the phone number
-    and OTP in the session. The user is then redirected to verify the OTP.
+    Saves the phone number and sends an OTP.
     """
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            # Save user using the custom form.
             user = form.save(commit=False)
             user.username = form.cleaned_data["phone_number"]
             user.save()
-            # The post-save signal should create the UserProfile.
-            # Update the UserProfile with the phone number.
+            # Update UserProfile (typically created via signals)
             user_profile = user.userprofile
             user_profile.phone_number = form.cleaned_data["phone_number"]
             user_profile.save()
             
-            # Generate OTP and store in session.
             otp = send_otp(form.cleaned_data["phone_number"])
             request.session['otp'] = otp
             request.session['phone_number'] = form.cleaned_data["phone_number"]
             
             logger.info(f"User {user.username} registered; OTP sent.")
-            # Redirect to OTP verification view.
             return redirect('verify_otp')
     else:
         form = RegistrationForm()
     return render(request, 'tasks/register.html', {'form': form})
 
 def login_view(request):
+    """Handles user login."""
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -182,15 +134,13 @@ def login_view(request):
 def verify_otp(request):
     """
     Verifies the OTP entered by the user.
-    On GET, displays the OTP on the page for testing purposes.
-    On POST, checks the OTP and logs the user in if correct.
+    On success, logs in the user and redirects them.
     """
     if request.method == "POST":
         otp_entered = request.POST.get('otp')
         otp_sent = request.session.get('otp')
         if str(otp_entered) == str(otp_sent):
             phone_number = request.session.get('phone_number')
-            from django.contrib.auth.models import User
             user = User.objects.get(username=phone_number)
             login(request, user)
             # Clear OTP data from session
@@ -199,16 +149,13 @@ def verify_otp(request):
             return redirect('choose_plan')
         else:
             error = "Invalid OTP. Please try again."
-            # Pass the OTP code so the user can see it for testing.
             return render(request, 'verify_otp.html', {'error': error, 'otp_code': request.session.get('otp')})
     else:
-        # GET: simply display the OTP on the page
         return render(request, 'verify_otp.html', {'otp_code': request.session.get('otp')})
 
 # ------------------------
 # Dashboard / Home Views
 # ------------------------
-
 def home(request):
     return render(request, 'tasks/home.html', {'user': request.user})
 
@@ -224,31 +171,18 @@ def mine(request):
     try:
         user_profile = request.user.userprofile
         today = datetime.date.today()
-        
-        # Reset daily counter if it's a new day
         if user_profile.last_mine_date != today:
             user_profile.mines_today = 0
             user_profile.last_mine_date = today
         
-        # Check if daily limit is reached
         if user_profile.plan and user_profile.mines_today >= user_profile.plan.daily_mines:
             return JsonResponse({'status': 'error', 'message': 'Daily mining limit reached.'})
         
-        simulate_delay(10)  # Simulate task delay
-        
-        # Increment counter and update balance
+        simulate_delay(10)
         reward = user_profile.plan.reward_per_mine
         user_profile.balance += reward
-        user_profile.mines_today += 1  # Increment counter
-        user_profile.save()  # Save changes to the database
-
-          # Create a transaction record
-        Transaction.objects.create(
-            user=user_profile,
-            amount=reward,
-            description="Mining reward"
-        )
-        
+        user_profile.mines_today += 1
+        user_profile.save()
         return JsonResponse({
             'status': 'success',
             'balance': float(user_profile.balance),
@@ -262,9 +196,7 @@ def mine(request):
 @login_required
 def activate_ads(request):
     """
-    Activates ads for the user:
-      - Deducts the activation fee (if required).
-      - Resets the daily ad count.
+    Activates ads for the user by deducting a fee and resetting ad counters.
     """
     try:
         user_profile = request.user.userprofile
@@ -288,31 +220,18 @@ def watch_ad(request):
     try:
         user_profile = request.user.userprofile
         today = datetime.date.today()
-        
-        # Reset daily ads if it's a new day
         if user_profile.last_ad_date != today:
             user_profile.ads_watched_today = 0
             user_profile.last_ad_date = today
         
-        # Check if daily ad watch limit is reached
         if user_profile.plan and user_profile.ads_watched_today >= user_profile.plan.daily_ads:
             return JsonResponse({'status': 'error', 'message': 'Daily ad watch limit reached.'})
         
-        simulate_delay(10)  # Simulate ad-watching delay
-        
-        # Increment counter and update balance
+        simulate_delay(10)
         reward = user_profile.plan.reward_per_ad
         user_profile.balance += reward
-        user_profile.ads_watched_today += 1  # Increment counter
-        user_profile.save()  # Save changes to the database
-        
-        # Create a transaction record
-        Transaction.objects.create(
-            user=user_profile,
-            amount=reward,
-            description="Mining reward"
-        )
-        
+        user_profile.ads_watched_today += 1
+        user_profile.save()
         return JsonResponse({
             'status': 'success',
             'balance': float(user_profile.balance),
@@ -326,26 +245,19 @@ def watch_ad(request):
 @login_required
 def start_task(request):
     """
-    Processes a task:
-      - Finds the first uncompleted task.
-      - Simulates a 10-second execution delay.
-      - Marks the task as completed.
-      - Credits the user with reward based on their plan.
+    Processes a task by marking it completed and crediting the user.
     """
     try:
         user_profile = UserProfile.objects.get(user=request.user)
         task = Task.objects.filter(user=user_profile, completed=False).first()
-        
         if task:
-            simulate_delay(3)  # Simulate task execution delay
+            simulate_delay(3)
             task.completed = True
             task.save()
-            
             if user_profile.plan:
                 user_profile.balance += user_profile.plan.reward_per_mine
                 user_profile.save()
                 logger.info(f"[START_TASK] Balance updated to: {user_profile.balance}")
-            
             return JsonResponse({'status': 'success', 'balance': float(user_profile.balance)})
         return JsonResponse({'status': 'no_tasks'})
     except Exception as e:
@@ -354,6 +266,7 @@ def start_task(request):
 
 @login_required
 def perform_task(request):
+    """Renders the task performance page with user details."""
     user_profile = request.user.userprofile
     context = {
         'balance': user_profile.balance,
@@ -371,8 +284,7 @@ def perform_task(request):
 @login_required
 def deposit(request):
     """
-    Processes a deposit request by creating a DepositRequest record with status 'pending'.
-    Displays amounts in dollars.
+    Processes a deposit request by creating a DepositRequest record.
     """
     if request.method == 'POST':
         amount_str = request.POST.get("amount")
@@ -399,11 +311,11 @@ def deposit(request):
         return redirect('home')
     
     return render(request, 'tasks/deposit.html')
+
 @login_required
 def withdrawal(request):
     """
-    Processes a withdrawal request by creating a WithdrawalRequest record with status 'pending'.
-    Enforces a minimum withdrawal amount of $500.
+    Processes a withdrawal request with a minimum amount of $500.
     """
     if request.method == 'POST':
         try:
@@ -419,8 +331,6 @@ def withdrawal(request):
                 return redirect('withdrawal')
             
             user_profile = request.user.userprofile
-            
-            # Create a withdrawal request with status 'pending'
             WithdrawalRequest.objects.create(
                 user=user_profile,
                 amount=amount,
@@ -433,9 +343,10 @@ def withdrawal(request):
             return redirect('home')
     
     return render(request, 'tasks/withdrawal.html')
+
 def request_withdrawal(request):
     """
-    Allows the user to request a withdrawal.
+    Allows the user to request a withdrawal directly.
     """
     if request.method == "POST":
         try:
@@ -443,7 +354,6 @@ def request_withdrawal(request):
             if request.user.userprofile.balance < amount:
                 messages.error(request, "Insufficient balance.")
                 return redirect("user_dashboard")
-            # Create a withdrawal record (approval handled by admin)
             Withdrawal.objects.create(user=request.user, amount=amount, status="pending")
             messages.success(request, "Withdrawal request submitted. Awaiting admin approval.")
             return redirect("user_dashboard")
@@ -459,14 +369,7 @@ def request_withdrawal(request):
 @login_required
 def choose_plan(request):
     """
-    Renders a page for the user to choose and activate (or upgrade) a plan.
-    On POST:
-      - Validates that the user is not reactivating the same plan.
-      - Checks for sufficient balance and deducts the activation fee.
-      - Resets daily counters if upgrading.
-      - Sets the new plan and activation date.
-      - If a referral code is present in the session and the new plan is not 'trainee',
-        credits the inviter with the plan's invitation commission.
+    Renders a page for the user to choose and activate/upgrade a plan.
     """
     if request.method == "POST":
         plan_id = request.POST.get("plan_id")
@@ -477,37 +380,28 @@ def choose_plan(request):
             return redirect("choose_plan")
         
         user_profile = request.user.userprofile
-
-        # Check if the user is trying to select the same plan.
         if user_profile.plan and user_profile.plan.id == plan.id:
             messages.error(request, "You are already on this plan. Please select a different plan to upgrade.")
             return redirect("choose_plan")
-        
         if user_profile.balance < plan.activation_fee:
             messages.error(request, "Insufficient balance to activate this plan.")
             return redirect("choose_plan")
         
-        # Deduct activation fee.
         user_profile.balance -= plan.activation_fee
-        
-        # If upgrading (i.e. user already has a plan), reset daily counters.
         if user_profile.plan:
             user_profile.mines_today = 0
             user_profile.last_mine_date = None
             user_profile.ads_watched_today = 0
             user_profile.last_ad_date = None
         
-        # Set the new plan and activation date.
         user_profile.plan = plan
         user_profile.plan_activation_date = datetime.date.today()
         user_profile.save()
         
-        # Process referral commission if a referral code is present.
         referral_code = request.session.get("referral_code", None)
         if referral_code:
             try:
                 inviter = UserProfile.objects.get(referral_code=referral_code)
-                # Award commission only if the new plan is not 'trainee'.
                 if plan.name.strip().lower() != "trainee":
                     inviter.balance += plan.invitation_commission
                     inviter.save()
@@ -516,30 +410,26 @@ def choose_plan(request):
                     logger.info("No commission awarded because the new plan is 'trainee'")
             except UserProfile.DoesNotExist:
                 logger.warning("Referral code invalid; no inviter found.")
-            # Remove referral code from session after processing.
             request.session.pop("referral_code", None)
         
         messages.success(request, "Plan activated/upgraded successfully! Your daily limits have been reset.")
         return redirect("home")
-    
     else:
         plans = Plan.objects.all()
         user_balance = request.user.userprofile.balance
         return render(request, "tasks/choose_plan.html", {"plans": plans, "balance": user_balance})
 
+# ------------------------
 # Other Views
 # ------------------------
 @login_required
 def invite(request):
+    """Generates an invitation link for the user."""
     user_profile = request.user.userprofile
-    # If the referral_code field is empty, generate one.
     if not user_profile.referral_code:
-        # For example, generate a referral code using the username and a random 4-digit number.
         user_profile.referral_code = f"{request.user.username}{random.randint(1000, 9999)}"
         user_profile.save()
-    # Build the absolute URL for the invitation link.
-    base_url = request.build_absolute_uri('/')  # e.g., "http://127.0.0.1:8000/"
-    # Construct the invitation URL. (Make sure the registration view processes this referral_code.)
+    base_url = request.build_absolute_uri('/')
     invite_url = f"{base_url}tasks/register/?referral_code={user_profile.referral_code}"
     return render(request, 'tasks/invite.html', {'invite_url': invite_url})
 
@@ -549,22 +439,19 @@ def contact_support(request):
 
 @login_required
 def logout_view(request):
-    """
-    Logs out the user and redirects them to the home page.
-    """
     logout(request)
     messages.info(request, "You have been logged out.")
     return redirect('home')
 
 def currency_converter(request):
     """
-    A simple view to convert an amount from USD to .
-    Assumes a conversion rate of 1  = 100 USD.
+    A simple view to convert USD to another currency.
+    Assumes a conversion rate of 1 unit = 100 USD.
     """
     result = None
     error = None
     USD_amount = None
-    conversion_rate = Decimal('100')  # Adjust this rate as needed
+    conversion_rate = Decimal('100')
     if request.method == "POST":
         USD_str = request.POST.get("USD")
         try:
@@ -577,15 +464,57 @@ def currency_converter(request):
         "error": error,
         "USD_amount": USD_amount,
     })
-def mask_phone_number(phone):
-    """Mask phone number to show only first 3 and last 2 digits."""
-    if len(phone) >= 5:
-        return phone[:3] + "****" + phone[-2:]
-    return phone  # Return as is if too short
 
-def mask_address(address):
-    """Mask address to show only first 5 and last 3 characters."""
-    if len(address) >= 8:
-        return address[:5] + "****" + address[-3:]
-    return address  # Return as is if too short
+@login_required
+def income_summary(request):
+    """
+    Displays income summary with aggregated totals and a 7-day earnings chart.
+    """
+    user_profile = request.user.userprofile
+    now_time = timezone.now()
+    today_start = now_time.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - datetime.timedelta(days=today_start.weekday())
+    month_start = today_start.replace(day=1)
+    
+    total_today = Transaction.objects.filter(user=user_profile, timestamp__gte=today_start).aggregate(total=Sum("amount"))["total"] or 0
+    total_week = Transaction.objects.filter(user=user_profile, timestamp__gte=week_start).aggregate(total=Sum("amount"))["total"] or 0
+    total_month = Transaction.objects.filter(user=user_profile, timestamp__gte=month_start).aggregate(total=Sum("amount"))["total"] or 0
 
+    last_7_days_labels = []
+    last_7_days_data = []
+    for i in range(7):
+        day = today_start - datetime.timedelta(days=6 - i)
+        day_total = Transaction.objects.filter(user=user_profile, timestamp__date=day).aggregate(total=Sum("amount"))["total"] or 0
+        last_7_days_labels.append(day.strftime("%b %d"))
+        last_7_days_data.append(day_total)
+    
+    context = {
+        'today_income': total_today,
+        'week_income': total_week,
+        'month_income': total_month,
+        'labels': last_7_days_labels,
+        'earnings_data': last_7_days_data,
+    }
+    return render(request, 'tasks/income_summary.html', context)
+@staff_member_required
+def admin_dashboard(request):
+    # Get today's date
+    today = timezone.now().date()
+    
+    # Aggregate all transactions made today
+    today_transactions = Transaction.objects.filter(timestamp__date=today)
+    total_earnings = today_transactions.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+
+    # Count active users
+    # Option 1: Count all users with is_active=True
+    active_users_count = User.objects.filter(is_active=True).count()
+
+    # Option 2: Count users who have logged in within the last 24 hours
+    # active_users_count = User.objects.filter(last_login__gte=timezone.now()-timezone.timedelta(days=1)).count()
+
+    context = {
+        "total_earnings": total_earnings,
+        "active_users_count": active_users_count,
+        "today": today,
+    }
+    return render(request, "admin_dashboard.html", context)
