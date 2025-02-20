@@ -1,6 +1,5 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from .views import admin_dashboard
 from .views import (
     home, register, login_view, verify_otp, task_page,
     mine, activate_ads, watch_ad, start_task, perform_task,
@@ -29,7 +28,6 @@ urlpatterns = [
     path('invite/', invite, name='invite'),
     path('contact_support/', contact_support, name='contact_support'),
     path('logout/', logout_view, name='logout'),
-    path('admin-dashboard/', admin_dashboard, name='admin_dashboard'),
     path('get_random_withdrawal/', get_random_withdrawal, name='get_random_withdrawal'),
     # Password reset paths:
     path('password-reset/', auth_views.PasswordResetView.as_view(template_name='password_reset.html'), name='password_reset'),

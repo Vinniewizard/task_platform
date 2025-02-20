@@ -26,9 +26,29 @@ from .models import (
     Task,
     Plan,
 )
+from celery import shared_task
+from django.utils import timezone
+from tasks.models import UserProfile
+
+@shared_task
+def reset_daily_counters():
+    today = timezone.localtime(timezone.now()).date()
+    profiles = UserProfile.objects.all()
+    for profile in profiles:
+        profile.mines_today = 0
+        profile.ads_watched_today = 0
+        profile.last_mine_date = today
+        profile.last_ad_date = today
+        profile.save()
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+import logging
+logger = logging.getLogger(__name__)
+
+today = timezone.localtime(timezone.now()).date()
+logger.info(f"Today is {today} and last_mine_date is {UserProfile.last_mine_date}")
 
 # ------------------------
 # Helper Functions
@@ -166,23 +186,33 @@ def task_page(request):
 # ------------------------
 # Game Logic / Task Views
 # ------------------------
+from django.utils import timezone
+
 @login_required
 def mine(request):
     try:
         user_profile = request.user.userprofile
-        today = datetime.date.today()
+        # Use local time for today's date
+        today = timezone.localtime(timezone.now()).date()
+        
+        # Reset daily counter if it's a new day
         if user_profile.last_mine_date != today:
             user_profile.mines_today = 0
             user_profile.last_mine_date = today
-        
+            user_profile.save()  # Save the reset values
+
+        # Check if daily limit is reached
         if user_profile.plan and user_profile.mines_today >= user_profile.plan.daily_mines:
             return JsonResponse({'status': 'error', 'message': 'Daily mining limit reached.'})
         
-        simulate_delay(10)
+        simulate_delay(10)  # Simulate task delay
+        
+        # Increment counter and update balance
         reward = user_profile.plan.reward_per_mine
         user_profile.balance += reward
         user_profile.mines_today += 1
-        user_profile.save()
+        user_profile.save()  # Save changes to the database
+        
         return JsonResponse({
             'status': 'success',
             'balance': float(user_profile.balance),
@@ -467,27 +497,42 @@ def currency_converter(request):
 
 @login_required
 def income_summary(request):
-    """
-    Displays income summary with aggregated totals and a 7-day earnings chart.
-    """
     user_profile = request.user.userprofile
-    now_time = timezone.now()
+    # Use local time for accurate "today" calculation
+    now_time = timezone.localtime(timezone.now())
+
+    # Define start times based on local time
     today_start = now_time.replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = today_start - datetime.timedelta(days=today_start.weekday())
     month_start = today_start.replace(day=1)
-    
-    total_today = Transaction.objects.filter(user=user_profile, timestamp__gte=today_start).aggregate(total=Sum("amount"))["total"] or 0
-    total_week = Transaction.objects.filter(user=user_profile, timestamp__gte=week_start).aggregate(total=Sum("amount"))["total"] or 0
-    total_month = Transaction.objects.filter(user=user_profile, timestamp__gte=month_start).aggregate(total=Sum("amount"))["total"] or 0
 
+    total_today = Transaction.objects.filter(
+        user=user_profile,
+        timestamp__gte=today_start
+    ).aggregate(total=Sum("amount"))["total"] or 0
+
+    total_week = Transaction.objects.filter(
+        user=user_profile,
+        timestamp__gte=week_start
+    ).aggregate(total=Sum("amount"))["total"] or 0
+
+    total_month = Transaction.objects.filter(
+        user=user_profile,
+        timestamp__gte=month_start
+    ).aggregate(total=Sum("amount"))["total"] or 0
+
+    # Prepare data for a 7-day earnings line chart
     last_7_days_labels = []
     last_7_days_data = []
     for i in range(7):
         day = today_start - datetime.timedelta(days=6 - i)
-        day_total = Transaction.objects.filter(user=user_profile, timestamp__date=day).aggregate(total=Sum("amount"))["total"] or 0
+        day_total = Transaction.objects.filter(
+            user=user_profile,
+            timestamp__date=day
+        ).aggregate(total=Sum("amount"))["total"] or 0
         last_7_days_labels.append(day.strftime("%b %d"))
         last_7_days_data.append(day_total)
-    
+
     context = {
         'today_income': total_today,
         'week_income': total_week,
@@ -496,6 +541,7 @@ def income_summary(request):
         'earnings_data': last_7_days_data,
     }
     return render(request, 'tasks/income_summary.html', context)
+
 @staff_member_required
 def admin_dashboard(request):
     # Get today's date

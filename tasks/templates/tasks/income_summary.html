@@ -4,9 +4,9 @@
     <h2 class="text-center mb-4">Income Summary</h2>
 
     <div class="card shadow p-4 mb-4">
-        <p><strong>Today's Income:</strong> KSh {{ today_income }}</p>
-        <p><strong>This Week's Income:</strong> KSh {{ week_income }}</p>
-        <p><strong>This Month's Income:</strong> KSh {{ month_income }}</p>
+        <p><strong>Today's Income:</strong> USD {{ today_income }}</p>
+        <p><strong>This Week's Income:</strong> USD {{ week_income }}</p>
+        <p><strong>This Month's Income:</strong> USD {{ month_income }}</p>
     </div>
 
     <!-- Line Chart: Earnings over the Last 7 Days -->
@@ -36,7 +36,7 @@
         data: {
             labels: {{ labels|safe }},
             datasets: [{
-                label: 'Daily Earnings (KSh)',
+                label: 'Daily Earnings (USD)',
                 data: {{ earnings_data|safe }},
                 backgroundColor: 'rgba(54, 162, 235, 0.2)',
                 borderColor: 'rgba(54, 162, 235, 1)',

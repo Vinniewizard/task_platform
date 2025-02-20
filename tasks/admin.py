@@ -1,20 +1,13 @@
 from django.contrib import admin
-from .models import (
-    UserProfile, Task, Transaction, Plan, CommissionTransaction,
-    Withdrawal, DepositRequest, WithdrawalRequest
-)
 
-# ---------------------------
-# CommissionTransaction Admin
-# ---------------------------
-@admin.register(CommissionTransaction)
-class CommissionTransactionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'amount', 'description', 'created_at')
+# Register your models here.
 
+from .models import UserProfile, Task, Transaction, Plan,CommissionTransaction
+from .models import Withdrawal
 
-# ---------------------------
-# DepositRequest Admin & Actions
-# ---------------------------
+from .models import DepositRequest
+from .models import WithdrawalRequest
+
 @admin.action(description="Approve selected deposits")
 def approve_deposits(modeladmin, request, queryset):
     for deposit in queryset:
@@ -35,14 +28,11 @@ class DepositRequestAdmin(admin.ModelAdmin):
 
 admin.site.register(DepositRequest, DepositRequestAdmin)
 
-
-# ---------------------------
-# WithdrawalRequest Admin & Actions
-# ---------------------------
 @admin.action(description="Approve selected withdrawal requests")
 def approve_withdrawals(modeladmin, request, queryset):
     for withdrawal in queryset:
         if withdrawal.status == 'pending':
+            # Deduct the amount from the user's balance
             user_profile = withdrawal.user
             if user_profile.balance >= withdrawal.amount:
                 user_profile.balance -= withdrawal.amount
@@ -50,6 +40,7 @@ def approve_withdrawals(modeladmin, request, queryset):
                 withdrawal.status = 'approved'
                 withdrawal.save()
             else:
+                # Optionally, you can skip or mark as failed if insufficient funds
                 withdrawal.status = 'rejected'
                 withdrawal.save()
 
@@ -63,10 +54,6 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
 
 admin.site.register(WithdrawalRequest, WithdrawalRequestAdmin)
 
-
-# ---------------------------
-# Withdrawal Admin
-# ---------------------------
 class WithdrawalAdmin(admin.ModelAdmin):
     list_display = ('user', 'amount', 'status', 'created_at')
     list_filter = ('status',)
@@ -81,24 +68,15 @@ class WithdrawalAdmin(admin.ModelAdmin):
     reject_withdrawals.short_description = "Reject selected withdrawals"
 
 admin.site.register(Withdrawal, WithdrawalAdmin)
-
-
-# ---------------------------
-# Other Models Registration
-# ---------------------------
+admin.site.register(CommissionTransaction)
+admin.site.register(UserProfile)
 admin.site.register(Task)
 admin.site.register(Transaction)
 admin.site.register(Plan)
 
-# ---------------------------
-# UserProfile Admin
-# ---------------------------
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone_number', 'balance', 'referral_count')
     
     def referral_count(self, obj):
-        # Adjust this if you have a different way to track referrals.
         return UserProfile.objects.filter(referred_by=obj).count()
     referral_count.short_description = "Referrals"
-
-admin.site.register(UserProfile, UserProfileAdmin)

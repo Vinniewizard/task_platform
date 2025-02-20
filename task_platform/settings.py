@@ -103,8 +103,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
 USE_I18N = True
+TIME_ZONE = 'Africa/Nairobi'
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)

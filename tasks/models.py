@@ -1,7 +1,6 @@
 from django.db import models
 from decimal import Decimal
 from django.contrib.auth import get_user_model
-
 User = get_user_model()
 
 # ---------------------------
@@ -81,7 +80,6 @@ class Task(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        # Accessing the related User from UserProfile
         return f"{self.user.user.username} - {self.name}"
 
 # ---------------------------
@@ -93,9 +91,6 @@ class Transaction(models.Model):
     description = models.CharField(max_length=255)
     timestamp = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{self.user.user.username} - {self.amount} - {self.description}"
-
 # ---------------------------
 # WITHDRAWAL REQUEST
 # ---------------------------
@@ -105,7 +100,7 @@ class WithdrawalRequest(models.Model):
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     ]
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    user = models.ForeignKey('UserProfile', on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -135,9 +130,6 @@ class Withdrawal(models.Model):
     withdrawal_method = models.CharField(max_length=20, choices=WITHDRAWAL_METHODS, default='mpesa')
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{self.user.username} - {self.amount} via {self.get_withdrawal_method_display()}"
-
 # ---------------------------
 # DEPOSIT REQUEST
 # ---------------------------
@@ -147,7 +139,7 @@ class DepositRequest(models.Model):
          ('mpesa', 'Safaricom M-Pesa'),
          ('airtel', 'Airtel Money'),
     ]
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    user = models.ForeignKey('UserProfile', on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
     reference = models.CharField(max_length=100, blank=True, null=True)
@@ -161,17 +153,14 @@ class DepositRequest(models.Model):
 # COMMISSION TRANSACTION
 # ---------------------------
 class CommissionTransaction(models.Model):
-    user = models.ForeignKey(
-        UserProfile,
-        on_delete=models.CASCADE,
-        related_name='commission_transactions'
-    )
+    user = models.ForeignKey('UserProfile', on_delete=models.CASCADE, related_name='commission_transactions')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Commission of {self.amount} for {self.user.user.username} on {self.created_at:%Y-%m-%d %H:%M:%S}"
+
 # ---------------------------
 # DEPOSIT
 # ---------------------------
@@ -180,9 +169,6 @@ class Deposit(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     mpesa_pin_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.user.username} - {self.amount}"
 
 # ---------------------------
 # VIRTUAL APP
@@ -193,9 +179,6 @@ class VirtualApp(models.Model):
     reward = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return self.name
-
 # ---------------------------
 # AD
 # ---------------------------
@@ -205,6 +188,3 @@ class Ad(models.Model):
     reward = models.DecimalField(max_digits=10, decimal_places=2)
     duration = models.IntegerField()  # in seconds
     created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.title
