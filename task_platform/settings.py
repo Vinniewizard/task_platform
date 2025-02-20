@@ -20,17 +20,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-m(5r$+0yt376vz67ift0*g!z%z!zd@4q$ven7*vc(hc^r-2s9v'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
-    "task-platform-rgyp.onrender.com"]
+    "task-platform-1.onrender.com"]
 0
     "127.0.0.1",
     "localhost"
 ]
 
 CSRF_TRUSTED_ORIGINS = ["
-https://task-platform-rgyp.onrender.com"]
+https://task-platform-1.onrender.com"]
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
