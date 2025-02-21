@@ -15,3 +15,4 @@ class Command(BaseCommand):
             profile.last_ad_date = today
             profile.save()
         self.stdout.write(self.style.SUCCESS("Daily counters reset for all users."))
+print()
