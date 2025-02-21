@@ -1,19 +1,12 @@
 from django.contrib import admin
-
-# Register your models here.
-
-from .models import UserProfile, Task, Transaction, Plan,CommissionTransaction
-from .models import Withdrawal
-
-from .models import DepositRequest
-from .models import WithdrawalRequest
+from .models import UserProfile, Task, Transaction, Plan, CommissionTransaction
+from .models import Withdrawal, DepositRequest, WithdrawalRequest
 
 @admin.action(description="Approve selected deposits")
 def approve_deposits(modeladmin, request, queryset):
     for deposit in queryset:
         if deposit.status == 'pending':
             deposit.status = 'approved'
-            # Add the deposit amount to the user's balance
             deposit.user.balance += deposit.amount
             deposit.user.save()
             deposit.save()
@@ -32,7 +25,6 @@ admin.site.register(DepositRequest, DepositRequestAdmin)
 def approve_withdrawals(modeladmin, request, queryset):
     for withdrawal in queryset:
         if withdrawal.status == 'pending':
-            # Deduct the amount from the user's balance
             user_profile = withdrawal.user
             if user_profile.balance >= withdrawal.amount:
                 user_profile.balance -= withdrawal.amount
@@ -40,7 +32,6 @@ def approve_withdrawals(modeladmin, request, queryset):
                 withdrawal.status = 'approved'
                 withdrawal.save()
             else:
-                # Optionally, you can skip or mark as failed if insufficient funds
                 withdrawal.status = 'rejected'
                 withdrawal.save()
 
@@ -69,14 +60,16 @@ class WithdrawalAdmin(admin.ModelAdmin):
 
 admin.site.register(Withdrawal, WithdrawalAdmin)
 admin.site.register(CommissionTransaction)
-admin.site.register(UserProfile)
 admin.site.register(Task)
 admin.site.register(Transaction)
 admin.site.register(Plan)
 
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone_number', 'balance', 'referral_count')
-    
+
     def referral_count(self, obj):
         return UserProfile.objects.filter(referred_by=obj).count()
     referral_count.short_description = "Referrals"
+
+# ✅ Fix: Only register UserProfile once
+admin.site.register(UserProfile, UserProfileAdmin)

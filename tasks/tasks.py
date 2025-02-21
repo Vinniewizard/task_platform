@@ -1,9 +1,9 @@
 # tasks/tasks.py
-from celery import shared_tasks
+from celery import shared_task
 from django.utils import timezone
 from .models import UserProfile
 
-@shared_tasks
+@shared_task
 def reset_daily_counters():
     today = timezone.localtime(timezone.now()).date()
     profiles = UserProfile.objects.all()

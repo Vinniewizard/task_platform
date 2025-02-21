@@ -41,7 +41,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'tasks',
+    'django_celery_results',
+    'django_celery_beat',
 ]
+# Celery settings
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Ensure Redis is running
+# CELERY SETTINGS
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # or use another broker like RabbitMQ
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -514,16 +514,20 @@ def income_summary(request):
     one_week_ago = today - timedelta(days=7)
     one_month_ago = today - timedelta(days=30)
 
-    daily_income = Income.objects.filter(date_received__date=today).aggregate(total=Sum('amount'))['total'] or 0
-    weekly_income = Income.objects.filter(date_received__date__gte=one_week_ago).aggregate(total=Sum('amount'))['total'] or 0
-    monthly_income = Income.objects.filter(date_received__date__gte=one_month_ago).aggregate(total=Sum('amount'))['total'] or 0
+    # Aggregate total earnings from all Income records.
+    total_earnings = Income.objects.aggregate(total=Sum('amount'))['total'] or 0
+
+    # Use the __date lookup on date_received for filtering by day.
+    today_income = Income.objects.filter(date_received__date=today).aggregate(total=Sum('amount'))['total'] or 0
+    week_income = Income.objects.filter(date_received__date__gte=one_week_ago).aggregate(total=Sum('amount'))['total'] or 0
+    month_income = Income.objects.filter(date_received__date__gte=one_month_ago).aggregate(total=Sum('amount'))['total'] or 0
 
     context = {
-        "daily": daily_income,
-        "weekly": weekly_income,
-        "monthly": monthly_income,
+        "total_earnings": total_earnings,
+        "today_income": today_income,
+        "week_income": week_income,
+        "month_income": month_income,
     }
-
     return render(request, 'income_summary.html', context)
 @staff_member_required
 def admin_dashboard(request):

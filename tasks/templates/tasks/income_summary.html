@@ -1,35 +1,19 @@
-from django.shortcuts import render
-from django.db.models import Sum
-from django.utils.timezone import now
-from datetime import timedelta
-from .models import Income
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-5">
+    <h2 class="text-center mb-4">Income Summary</h2>
 
-def income_summary(request):
-    today = now().date()
-    one_week_ago = today - timedelta(days=7)
-    one_month_ago = today - timedelta(days=30)
+    <div class="card shadow p-4 mb-4">
+        <p><strong>Total Earnings (All Users):</strong> USD {{ total_earnings }}</p>
+        <p><strong>Today's Income:</strong> USD {{ today_income }}</p>
+        <p><strong>This Week's Income:</strong> USD {{ week_income }}</p>
+        <p><strong>This Month's Income:</strong> USD {{ month_income }}</p>
+    </div>
 
-    # Use __date lookup to compare the date part of date_received
-    today_income = Income.objects.filter(date_received__date=today).aggregate(total=Sum('amount'))['total'] or 0
-    week_income = Income.objects.filter(date_received__date__gte=one_week_ago).aggregate(total=Sum('amount'))['total'] or 0
-    month_income = Income.objects.filter(date_received__date__gte=one_month_ago).aggregate(total=Sum('amount'))['total'] or 0
+    <!-- Your charts and additional content here -->
 
-    # Generate chart data for the last 7 days
-    labels = []
-    earnings_data = []
-    for i in range(7):
-        day = today - timedelta(days=i)
-        labels.append(day.strftime("%Y-%m-%d"))
-        daily_total = Income.objects.filter(date_received__date=day).aggregate(total=Sum('amount'))['total'] or 0
-        earnings_data.append(daily_total)
-    labels.reverse()
-    earnings_data.reverse()
-
-    context = {
-        "today_income": today_income,
-        "week_income": week_income,
-        "month_income": month_income,
-        "labels": labels,
-        "earnings_data": earnings_data,
-    }
-    return render(request, 'income_summary.html', context)
+    <div class="text-center mt-4">
+        <a href="{% url 'home' %}" class="btn btn-primary">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}
