@@ -2,6 +2,8 @@ from django.db import models
 from decimal import Decimal
 from django.contrib.auth import get_user_model
 User = get_user_model()
+from django.conf import settings
+
 
 # ---------------------------
 # CONSTANTS
@@ -188,3 +190,11 @@ class Ad(models.Model):
     reward = models.DecimalField(max_digits=10, decimal_places=2)
     duration = models.IntegerField()  # in seconds
     created_at = models.DateTimeField(auto_now_add=True)
+class Income(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField(blank=True, null=True)
+    date_received = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user} - {self.amount}"

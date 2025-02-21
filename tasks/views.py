@@ -30,6 +30,19 @@ from .models import (
 from celery import shared_task
 from django.utils import timezone
 from tasks.models import UserProfile
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from django.utils.timezone import now
+from datetime import timedelta
+from .models import Income  # Ensure this model exists
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.db import models
+from django.utils.timezone import now
+from datetime import timedelta
+from .models import Income
+
+
 
 @shared_task
 def reset_daily_counters():
@@ -496,53 +509,22 @@ def currency_converter(request):
         "USD_amount": USD_amount,
     })
 
-@login_required
+@api_view(['GET'])
 def income_summary(request):
-    user_profile = request.user.userprofile
-    # Use local time for accurate "today" calculation
-    now_time = timezone.localtime(timezone.now())
+    """Returns income data grouped by time periods."""
+    today = now().date()
+    one_week_ago = today - timedelta(days=7)
+    one_month_ago = today - timedelta(days=30)
 
-    # Define start times based on local time
-    today_start = now_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    week_start = today_start - datetime.timedelta(days=today_start.weekday())
-    month_start = today_start.replace(day=1)
+    daily_income = Income.objects.filter(date_received=today).aggregate(total=models.Sum('amount'))['total'] or 0
+    weekly_income = Income.objects.filter(date_received__gte=one_week_ago).aggregate(total=models.Sum('amount'))['total'] or 0
+    monthly_income = Income.objects.filter(date_received__gte=one_month_ago).aggregate(total=models.Sum('amount'))['total'] or 0
 
-    total_today = Transaction.objects.filter(
-        user=user_profile,
-        timestamp__gte=today_start
-    ).aggregate(total=Sum("amount"))["total"] or 0
-
-    total_week = Transaction.objects.filter(
-        user=user_profile,
-        timestamp__gte=week_start
-    ).aggregate(total=Sum("amount"))["total"] or 0
-
-    total_month = Transaction.objects.filter(
-        user=user_profile,
-        timestamp__gte=month_start
-    ).aggregate(total=Sum("amount"))["total"] or 0
-
-    # Prepare data for a 7-day earnings line chart
-    last_7_days_labels = []
-    last_7_days_data = []
-    for i in range(7):
-        day = today_start - datetime.timedelta(days=6 - i)
-        day_total = Transaction.objects.filter(
-            user=user_profile,
-            timestamp__date=day
-        ).aggregate(total=Sum("amount"))["total"] or 0
-        last_7_days_labels.append(day.strftime("%b %d"))
-        last_7_days_data.append(day_total)
-
-    context = {
-        'today_income': total_today,
-        'week_income': total_week,
-        'month_income': total_month,
-        'labels': last_7_days_labels,
-        'earnings_data': last_7_days_data,
-    }
-    return render(request, 'tasks/income_summary.html', context)
-
+    return Response({
+        "daily": daily_income,
+        "weekly": weekly_income,
+        "monthly": monthly_income
+    })
 @staff_member_required
 def admin_dashboard(request):
     # Get today's date

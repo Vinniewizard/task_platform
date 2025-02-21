@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income Summary</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <canvas id="incomeChart"></canvas>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            fetch('/api/income-summary/')
+                .then(response => response.json())
+                .then(data => {
+                    const ctx = document.getElementById('incomeChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Daily', 'Weekly', 'Monthly'],
+                            datasets: [{
+                                label: 'Income Summary',
+                                data: [data.daily, data.weekly, data.monthly],
+                                backgroundColor: ['red', 'blue', 'green']
+                            }]
+                        }
+                    });
+                });
+        });
+    </script>
+</body>
+</html>
