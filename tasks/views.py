@@ -509,22 +509,22 @@ def currency_converter(request):
         "USD_amount": USD_amount,
     })
 
-@api_view(['GET'])
 def income_summary(request):
-    """Returns income data grouped by time periods."""
     today = now().date()
     one_week_ago = today - timedelta(days=7)
     one_month_ago = today - timedelta(days=30)
 
-    daily_income = Income.objects.filter(date_received=today).aggregate(total=models.Sum('amount'))['total'] or 0
-    weekly_income = Income.objects.filter(date_received__gte=one_week_ago).aggregate(total=models.Sum('amount'))['total'] or 0
-    monthly_income = Income.objects.filter(date_received__gte=one_month_ago).aggregate(total=models.Sum('amount'))['total'] or 0
+    daily_income = Income.objects.filter(date_received__date=today).aggregate(total=Sum('amount'))['total'] or 0
+    weekly_income = Income.objects.filter(date_received__date__gte=one_week_ago).aggregate(total=Sum('amount'))['total'] or 0
+    monthly_income = Income.objects.filter(date_received__date__gte=one_month_ago).aggregate(total=Sum('amount'))['total'] or 0
 
-    return Response({
+    context = {
         "daily": daily_income,
         "weekly": weekly_income,
-        "monthly": monthly_income
-    })
+        "monthly": monthly_income,
+    }
+
+    return render(request, 'income_summary.html', context)
 @staff_member_required
 def admin_dashboard(request):
     # Get today's date
