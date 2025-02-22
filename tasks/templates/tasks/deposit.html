@@ -1,67 +1,113 @@
-{% extends 'base.html' %}
-{% block content %}
-<div class="container my-5">
-  <h2>Deposit Money</h2>
-  <p>Please send your payment to the account number</strong></p>
-  <p>Then select your payment method, enter the deposited amount, and provide your transaction reference (if available).</p>
-  <form method="POST">
-      {% csrf_token %}
-      <div class="form-group">
-          <label for="payment_method">Payment Method:</label>
-          <select name="payment_method" id="payment_method" class="form-control" required>
-             <option value="">-- Choose Payment Method --</option>
-             <option value="binance">Binance</option>
-             <option value="mpesa">Safaricom M-Pesa</option>
-             <option value="airtel">Airtel Money</option>
-          </select>
-      </div>
-      
-      <!-- Instructions Area -->
-      <div id="payment-instructions" class="alert alert-info" style="display:none;"></div>
-      
-      <div class="form-group">
-          <label for="amount">Amount:</label>
-          <input type="number" step="0.01" name="amount" id="amount" class="form-control" required>
-      </div>
-      <div class="form-group">
-          <label for="reference">Transaction Reference (A must,Kindly make a deposit and come back here initialize for admin):</label>
-          <input type="String" name="reference" id="reference" class="form-control"  required>
-      </div>
-      <button type="submit" class="btn btn-success">Submit Deposit Request</button>
-  </form>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposit via M-Pesa</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
 
-<script>
-  // Listen for changes on the payment method select element
-  document.getElementById('payment_method').addEventListener('change', function() {
-    var method = this.value;
-    var instructionsDiv = document.getElementById('payment-instructions');
-    
-    if(method === 'mpesa'){
-      instructionsDiv.style.display = 'block';
-      instructionsDiv.innerHTML = '<strong>Safaricom M-Pesa Instructions:</strong><br>' +
-        '1. Dial <em>*334#</em> on your phone.<br>' +
-        '2. Select the option to send money.<br>' +
-        '3. Enter the recipient number: <strong>0758315014</strong>.<br>' +
-        '4. Input the amount and your transaction reference, then confirm the payment.';
-    } else if(method === 'binance'){
-      instructionsDiv.style.display = 'block';
-      instructionsDiv.innerHTML = '<strong>Binance Deposit Instructions:</strong><br>' +
-        '1. Log in to your Binance account.<br>' +
-        '2. Navigate to the P2P Send section.<br>' +
-        '3. Use the email: <strong>vincentkipkoech937@gmail.com</strong> as the account identifier.<br>' +
-        '4. Follow the on-screen instructions to complete the deposit, including your transaction reference.';
-    } else if(method === 'airtel'){
-      instructionsDiv.style.display = 'block';
-      instructionsDiv.innerHTML = '<strong>Airtel Money Instructions:</strong><br>' +
-        '1. Open your Airtel Money app or dial the service code.<br>' +
-        '2. Select the option to send money.<br>' +
-        '3. Enter the recipient number: <strong>0732241933</strong>.<br>' +
-        '4. Enter the amount and, if applicable, your transaction reference, then confirm the transaction.';
-    } else {
-      instructionsDiv.style.display = 'none';
-      instructionsDiv.innerHTML = '';
-    }
-  });
-</script>
-{% endblock %}
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .error {
+            color: red;
+            font-size: 14px;
+        }
+
+        .success {
+            color: green;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Deposit via M-Pesa</h2>
+        <form id="depositForm">
+            <input type="text" id="phone_number" placeholder="Enter Phone Number" required>
+            <input type="number" id="amount" placeholder="Enter Amount" required>
+            <button type="submit">Deposit</button>
+        </form>
+        <div id="responseMessage"></div>
+    </div>
+
+    <script>
+        document.getElementById("depositForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const phone_number = document.getElementById("phone_number").value;
+            const amount = document.getElementById("amount").value;
+            const responseMessage = document.getElementById("responseMessage");
+
+            if (!phone_number || !amount) {
+                responseMessage.innerHTML = "<p class='error'>Please fill in all fields.</p>";
+                return;
+            }
+
+            fetch("/api/mpesa/stk_push/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ phone_number, amount })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    responseMessage.innerHTML = `<p class='success'>${data.message}</p>`;
+                } else {
+                    responseMessage.innerHTML = `<p class='error'>${data.error || 'Something went wrong!'}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                responseMessage.innerHTML = "<p class='error'>An error occurred, please try again later.</p>";
+            });
+        });
+    </script>
+</body>
+</html>

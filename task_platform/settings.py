@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'transactions',  # Add this line
+    "mpesa",
     'tasks',
     'django_celery_results',
     'django_celery_beat',
@@ -87,6 +89,20 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'task_platform.wsgi.application'
+
+# settings.py
+
+# settings.py
+
+import os
+
+MPESA_CONFIG = {
+    "CONSUMER_KEY": "kMMCMYqmPfxgQDRQ5YKsNwRZfRsGktEAKETsFbz9stLJRoLr",
+    "CONSUMER_SECRET": "lCiSrLNaXoajzGNpK87cO5XbniNtSHbOKA8A2pw7KcMH7oDiprse5rSAL5dgIvTO",
+    "BUSINESS_SHORTCODE": "174379",  # Ensure it's correct
+    "PASSKEY": "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919",
+    "CALLBACK_URL": "https://yourdomain.com/api/mpesa/callback/",
+}
 
 # Database
 DATABASES = {
