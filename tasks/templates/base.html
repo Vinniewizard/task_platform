@@ -1,4 +1,6 @@
 {% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,8 +12,7 @@
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-  
+  <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
   <style>
     /* Inline fallback styling */
     body {
@@ -64,14 +65,22 @@
   </main>
 
   <!-- Advertisement Marquee -->
-  <div class="container-fluid py-3 ad-marquee">
-    <marquee behavior="scroll" direction="left" scrollamount="4">
-      <span>Ad 1: Special offer – Earn extra rewards with every deposit!</span> &nbsp;&nbsp;|&nbsp;&nbsp;
-      <span>Ad 2: Upgrade your plan to unlock more earning opportunities.</span> &nbsp;&nbsp;|&nbsp;&nbsp;
-      <span>Ad 3: Invite friends and earn commission instantly!</span> &nbsp;&nbsp;|&nbsp;&nbsp;
-      <span>Ad 4: Join Vintech-Technologies today and start earning big!</span>
-    </marquee>
-  </div>
+  <!-- Advertisement Marquee -->
+<!-- Advertisement Marquee -->
+<div class="container-fluid py-3 bg-light">
+  <marquee behavior="scroll" direction="left" scrollamount="5" class="color-changing-text">
+    <strong><i class="fas fa-bullhorn"></i> Special Offer:</strong> Earn extra rewards with every deposit! &nbsp;&nbsp;|&nbsp;&nbsp;
+    <strong><i class="fas fa-chart-line"></i> Upgrade your plan:</strong> Unlock more earning opportunities. &nbsp;&nbsp;|&nbsp;&nbsp;
+    <strong><i class="fas fa-gift"></i> Invite friends:</strong> Get instant commission on every referral! &nbsp;&nbsp;|&nbsp;&nbsp;
+    <strong><i class="fas fa-dollar-sign"></i> Daily Bonuses:</strong> Login daily and claim your free bonus cash! &nbsp;&nbsp;|&nbsp;&nbsp;
+    <strong><i class="fas fa-users"></i> Limited-Time Promo:</strong> New users get 20% extra on their first deposit! 🎉 &nbsp;&nbsp;|&nbsp;&nbsp;
+    <strong><i class="fas fa-coins"></i> Instant Withdrawals:</strong> Cash out your earnings anytime—fast and secure! &nbsp;&nbsp;|&nbsp;&nbsp;
+    <strong><i class="fas fa-hand-holding-usd"></i> Task Earnings:</strong> Complete tasks and earn real money! 💰 &nbsp;&nbsp;|&nbsp;&nbsp;
+    <strong><i class="fas fa-gem"></i> VIP Plans:</strong> Upgrade now for higher rewards and exclusive perks! 🌟 &nbsp;&nbsp;|&nbsp;&nbsp;
+    <strong><i class="fas fa-mobile-alt"></i> Mobile Friendly:</strong> Access Vintech-Technologies on any device—anytime, anywhere! 📱
+  </marquee>
+</div>
+
 
   <!-- Footer -->
   <footer class="bg-primary text-white text-center py-3">

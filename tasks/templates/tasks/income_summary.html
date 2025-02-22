@@ -8,9 +8,14 @@
         <p><strong>Today's Income:</strong> USD {{ today_income }}</p>
         <p><strong>This Week's Income:</strong> USD {{ week_income }}</p>
         <p><strong>This Month's Income:</strong> USD {{ month_income }}</p>
-    </div>
 
-    <!-- Your charts and additional content here -->
+        <hr>
+        <p><strong>Debug Info:</strong></p>
+        <p><strong>total_earnings:</strong> {{ total_earnings|default:"No Data" }}</p>
+        <p><strong>today_income:</strong> {{ today_income|default:"No Data" }}</p>
+        <p><strong>week_income:</strong> {{ week_income|default:"No Data" }}</p>
+        <p><strong>month_income:</strong> {{ month_income|default:"No Data" }}</p>
+    </div>
 
     <div class="text-center mt-4">
         <a href="{% url 'home' %}" class="btn btn-primary">Back to Dashboard</a>

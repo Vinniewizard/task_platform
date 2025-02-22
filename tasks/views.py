@@ -514,13 +514,28 @@ def income_summary(request):
     one_week_ago = today - timedelta(days=7)
     one_month_ago = today - timedelta(days=30)
 
-    # Aggregate total earnings from all Income records.
-    total_earnings = Income.objects.aggregate(total=Sum('amount'))['total'] or 0
+    try:
+        user_profile = UserProfile.objects.get(user=request.user)
+    except UserProfile.DoesNotExist:
+        print("UserProfile does not exist for this user.")
+        return render(request, 'income_summary.html', {
+            "total_earnings": 0,
+            "today_income": 0,
+            "week_income": 0,
+            "month_income": 0,
+        })
 
-    # Use the __date lookup on date_received for filtering by day.
-    today_income = Income.objects.filter(date_received__date=today).aggregate(total=Sum('amount'))['total'] or 0
-    week_income = Income.objects.filter(date_received__date__gte=one_week_ago).aggregate(total=Sum('amount'))['total'] or 0
-    month_income = Income.objects.filter(date_received__date__gte=one_month_ago).aggregate(total=Sum('amount'))['total'] or 0
+    total_earnings = Income.objects.filter(user=user_profile).aggregate(total=Sum('amount'))['total'] or 0
+    today_income = Income.objects.filter(user=user_profile, timestamp__date=today).aggregate(total=Sum('amount'))['total'] or 0
+    week_income = Income.objects.filter(user=user_profile, timestamp__date__gte=one_week_ago).aggregate(total=Sum('amount'))['total'] or 0
+    month_income = Income.objects.filter(user=user_profile, timestamp__date__gte=one_month_ago).aggregate(total=Sum('amount'))['total'] or 0
+
+    # Debugging prints
+    print(f"User: {request.user.username}")
+    print(f"Total Earnings: {total_earnings}")
+    print(f"Today's Income: {today_income}")
+    print(f"This Week's Income: {week_income}")
+    print(f"This Month's Income: {month_income}")
 
     context = {
         "total_earnings": total_earnings,
@@ -529,6 +544,7 @@ def income_summary(request):
         "month_income": month_income,
     }
     return render(request, 'income_summary.html', context)
+
 @staff_member_required
 def admin_dashboard(request):
     # Get today's date

@@ -101,7 +101,7 @@ MPESA_CONFIG = {
     "CONSUMER_SECRET": "lCiSrLNaXoajzGNpK87cO5XbniNtSHbOKA8A2pw7KcMH7oDiprse5rSAL5dgIvTO",
     "BUSINESS_SHORTCODE": "174379",  # Ensure it's correct
     "PASSKEY": "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919",
-    "CALLBACK_URL": "https://yourdomain.com/api/mpesa/callback/",
+    "CALLBACK_URL": "https://vintech-technologies.onrender.com/api/mpesa/callback/",
 }
 
 # Database
@@ -135,10 +135,19 @@ TIME_ZONE = 'Africa/Nairobi'
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
+import os
+
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
+
+# Ensure STATICFILES_DIRS includes your static folder
 STATICFILES_DIRS = [
-    BASE_DIR / "static",
+    os.path.join(BASE_DIR, "static"),
 ]
+
+# Directory where collectstatic will collect files
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
 # Use WhiteNoise to serve static files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
