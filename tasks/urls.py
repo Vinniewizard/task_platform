@@ -5,7 +5,7 @@ from .views import (
     mine, activate_ads, watch_ad, start_task, perform_task,
     deposit, withdrawal, request_withdrawal, choose_plan,
     invite, contact_support, logout_view, currency_converter,
-    income_summary, get_random_withdrawal,
+    income_summary, get_random_withdrawal,reset_tasks_view
 )
 
 urlpatterns = [
@@ -22,12 +22,14 @@ urlpatterns = [
     path('income-summary/', income_summary, name='income_summary'),
     path('deposit/', deposit, name='deposit'),
     path('withdrawal/', withdrawal, name='withdrawal'),
-    path('currency_converter/', currency_converter, name='currency_converter'),
+    path("currency-converter/", currency_converter, name="currency_converter"),
+    path("currency-converter/", currency_converter, name="currency_converter"),
     path('request_withdrawal/', request_withdrawal, name='request_withdrawal'),
     path('choose_plan/', choose_plan, name='choose_plan'),
     path('invite/', invite, name='invite'),
     path('contact_support/', contact_support, name='contact_support'),
     path('logout/', logout_view, name='logout'),
+    path("reset_tasks/", reset_tasks_view, name="reset_tasks"),
     path('get_random_withdrawal/', get_random_withdrawal, name='get_random_withdrawal'),
     # Password reset paths:
     path('password-reset/', auth_views.PasswordResetView.as_view(template_name='password_reset.html'), name='password_reset'),

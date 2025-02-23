@@ -16,6 +16,11 @@ from django.contrib.auth import login, logout
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.contrib.admin.views.decorators import staff_member_required
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import connection
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
 
 from .forms import RegistrationForm
 from .models import (
@@ -202,40 +207,33 @@ def task_page(request):
 # ------------------------
 from django.utils import timezone
 
-@login_required
+@api_view(['GET'])
 def mine(request):
-    try:
-        user_profile = request.user.userprofile
-        # Use local time for today's date
-        today = timezone.localtime(timezone.now()).date()
-        
-        # Reset daily counter if it's a new day
-        if user_profile.last_mine_date != today:
-            user_profile.mines_today = 0
-            user_profile.last_mine_date = today
-            user_profile.save()  # Save the reset values
+    user = request.user  # Get the logged-in user
 
-        # Check if daily limit is reached
-        if user_profile.plan and user_profile.mines_today >= user_profile.plan.daily_mines:
-            return JsonResponse({'status': 'error', 'message': 'Daily mining limit reached.'})
-        
-        simulate_delay(10)  # Simulate task delay
-        
-        # Increment counter and update balance
-        reward = user_profile.plan.reward_per_mine
-        user_profile.balance += reward
-        user_profile.mines_today += 1
-        user_profile.save()  # Save changes to the database
-        
-        return JsonResponse({
-            'status': 'success',
-            'balance': float(user_profile.balance),
-            'reward': reward,
-            'mines_done': user_profile.mines_today
-        })
+    if not user.is_authenticated:
+        return Response({'error': 'User not authenticated'}, status=401)
+
+    try:
+        user_profile, created = UserProfile.objects.get_or_create(user=user)
+
+        today = timezone.localtime(timezone.now()).date()
+        last_mine_date = user_profile.last_mine_date
+
+        logger.info(f"Today is {today} and last_mine_date is {last_mine_date}")
+
+        if last_mine_date == today:
+            return Response({'message': 'You have already mined today. Come back tomorrow!'}, status=400)
+
+        # Update last_mine_date
+        user_profile.last_mine_date = today
+        user_profile.save()
+
+        return Response({'message': 'Mining successful!'}, status=200)
+
     except Exception as e:
-        logger.error(f"[MINE] Error: {str(e)}")
-        return JsonResponse({'status': 'error', 'message': f'Error during mining: {str(e)}'})
+        logger.error(f"An error occurred: {str(e)}")
+        return Response({'error': 'Something went wrong!'}, status=500)
 
 @login_required
 def activate_ads(request):
@@ -567,3 +565,17 @@ def admin_dashboard(request):
         "today": today,
     }
     return render(request, "admin_dashboard.html", context)
+
+@csrf_exempt  # Disable CSRF for testing; remove this in production if using authentication
+def reset_tasks_view(request):
+    if request.method == "POST":
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("UPDATE tasks SET status = 'pending' WHERE status != 'pending';")
+                cursor.execute("UPDATE user_profiles SET last_reset = NOW();")
+
+            return JsonResponse({"message": "Tasks reset successfully!"}, status=200)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    
+    return JsonResponse({"error": "Invalid request method"}, status=400)
