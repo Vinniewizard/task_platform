@@ -42,13 +42,16 @@ class UserProfile(models.Model):
     country = models.CharField(max_length=100, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # ✅ Referral System Fields
     referral_code = models.CharField(max_length=10, unique=True, null=True, blank=True)
     referred_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True)
+
     wallet_address = models.CharField(max_length=255, null=True, blank=True)
 
     # Plan Subscription
-    plan = models.ForeignKey("Plan", on_delete=models.SET_NULL, null=True, blank=True)  # ✅ Added this line
-
+    plan = models.ForeignKey("Plan", on_delete=models.SET_NULL, null=True, blank=True)
+    
     # Daily task counters
     mines_today = models.IntegerField(default=0)
     last_mine_date = models.DateField(null=True, blank=True)
@@ -60,6 +63,11 @@ class UserProfile(models.Model):
     class Meta:
         verbose_name = "User Profile"
         verbose_name_plural = "User Profiles"
+
+    def save(self, *args, **kwargs):
+        if not self.referral_code:
+            self.referral_code = str(uuid.uuid4().hex[:8])  # Generate unique referral code
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.user.username

@@ -47,6 +47,7 @@ from django.db import connection
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from .models import Withdrawal  # Ensure correct model import
+from django.utils.timezone import now, timedelta
 
 
 
@@ -140,29 +141,60 @@ def send_otp(phone_number):
 def register(request):
     """
     Registers a new user using their phone number.
-    Saves the phone number and sends an OTP.
+    If a referral code is used, the referrer earns a commission.
     """
-    if request.method == 'POST':
+    if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.username = form.cleaned_data["phone_number"]
-            user.save()
-            # Update UserProfile (typically created via signals)
-            user_profile = user.userprofile
-            user_profile.phone_number = form.cleaned_data["phone_number"]
-            user_profile.save()
-            
-            otp = send_otp(form.cleaned_data["phone_number"])
-            request.session['otp'] = otp
-            request.session['phone_number'] = form.cleaned_data["phone_number"]
-            
-            logger.info(f"User {user.username} registered; OTP sent.")
-            return redirect('verify_otp')
+            try:
+                with transaction.atomic():  # Ensures database integrity
+                    user = form.save(commit=False)
+                    user.username = form.cleaned_data["phone_number"]
+                    user.save()
+
+                    # Create or update UserProfile
+                    user_profile, created = UserProfile.objects.get_or_create(user=user)
+                    user_profile.phone_number = form.cleaned_data["phone_number"]
+                    
+                    # Handle Referral Code
+                    referral_code = request.POST.get("referral_code")
+                    if referral_code:
+                        try:
+                            referrer = UserProfile.objects.get(referral_code=referral_code)
+                            user_profile.referred_by = referrer
+                            user_profile.save()
+
+                            # ✅ Add commission based on referrer's plan
+                            if referrer.plan:
+                                referrer.balance += referrer.plan.invitation_commission
+                                referrer.save()
+                                messages.success(request, f"You have earned ${referrer.plan.invitation_commission} for inviting {user.username}!")
+                            else:
+                                messages.warning(request, "Referrer does not have an active plan. No commission awarded.")
+
+                        except UserProfile.DoesNotExist:
+                            messages.error(request, "Invalid referral code.")
+
+                    user_profile.save()
+
+                    # Send OTP for verification
+                    otp = send_otp(form.cleaned_data["phone_number"])
+                    request.session["otp"] = otp
+                    request.session["phone_number"] = form.cleaned_data["phone_number"]
+
+                    messages.success(request, "Registration successful. OTP sent.")
+                    return redirect("verify_otp")
+
+            except Exception as e:
+                messages.error(request, f"🔥 Registration error: {e}")
+
+        else:
+            messages.error(request, f"❌ Form Errors: {form.errors}")
+
     else:
         form = RegistrationForm()
-    return render(request, 'tasks/register.html', {'form': form})
 
+    return render(request, "tasks/register.html", {"form": form})
 def login_view(request):
     """Handles user login."""
     if request.method == 'POST':
@@ -504,13 +536,15 @@ def choose_plan(request):
 def invite(request):
     """Generates an invitation link for the user."""
     user_profile = request.user.userprofile
+
     if not user_profile.referral_code:
         user_profile.referral_code = f"{request.user.username}{random.randint(1000, 9999)}"
         user_profile.save()
-    base_url = request.build_absolute_uri('/')
-    invite_url = f"{base_url}tasks/register/?referral_code={user_profile.referral_code}"
-    return render(request, 'tasks/invite.html', {'invite_url': invite_url})
 
+    base_url = request.build_absolute_uri("/")
+    invite_url = f"{base_url}tasks/register/?referral_code={user_profile.referral_code}"
+
+    return render(request, "tasks/invite.html", {"invite_url": invite_url})
 @login_required
 def contact_support(request):
     return render(request, 'tasks/contact_support.html')
@@ -543,38 +577,41 @@ def currency_converter(request):
         "USD_amount": USD_amount,
     })
 
+@login_required
 def income_summary(request):
-    user = request.user  # Get logged-in user
+    user = request.user  # Get the logged-in User instance
 
-    # Fetch account balance
-    user_profile = UserProfile.objects.get(user=user)
-    total_income = user_profile.balance  # Retrieve from UserProfile
+    try:
+        user_profile = UserProfile.objects.get(user=user)  # Get the associated UserProfile
+    except UserProfile.DoesNotExist:
+        return render(request, 'tasks/income_summary.html', {'error': 'User profile not found.'})
 
-    # Get current time
+    total_income = user_profile.balance  # Retrieve account balance from UserProfile
+
+    # Get current date ranges
     today = now().date()
-    week_start = today - timedelta(days=today.weekday())  # Monday of the current week
-    month_start = today.replace(day=1)  # First day of the month
+    week_start = today - timedelta(days=today.weekday())  # Start of the week
+    month_start = today.replace(day=1)  # Start of the month
+    last_7_days = today - timedelta(days=6)  # Last 7 days
 
-    # Fetch earnings from Income table (fixing the date filtering)
+    # Use `user` instead of `user_profile`
     today_income = Income.objects.filter(user=user, timestamp__date=today).aggregate(Sum('amount'))['amount__sum'] or 0
-    week_income = Income.objects.filter(user=user, timestamp__date__range=[week_start, today]).aggregate(Sum('amount'))['amount__sum'] or 0
-    month_income = Income.objects.filter(user=user, timestamp__date__range=[month_start, today]).aggregate(Sum('amount'))['amount__sum'] or 0
+    week_income = Income.objects.filter(user=user, timestamp__date__gte=week_start).aggregate(Sum('amount'))['amount__sum'] or 0
+    month_income = Income.objects.filter(user=user, timestamp__date__gte=month_start).aggregate(Sum('amount'))['amount__sum'] or 0
 
-    # Fetch last 7 days' earnings
-    last_7_days = today - timedelta(days=6)
+    # Earnings for the last 7 days
     daily_income = (
-        Income.objects.filter(user=user, timestamp__date__range=[last_7_days, today])
+        Income.objects.filter(user=user, timestamp__date__gte=last_7_days)
         .values('timestamp__date')
         .annotate(total=Sum('amount'))
         .order_by('timestamp__date')
     )
 
-    # Prepare data for charts
     labels = [entry['timestamp__date'].strftime('%Y-%m-%d') for entry in daily_income]
     data = [float(entry['total']) for entry in daily_income]
 
     context = {
-        'total_income': total_income,  # Fetch balance from UserProfile
+        'total_income': total_income,
         'today_income': today_income,
         'week_income': week_income,
         'month_income': month_income,

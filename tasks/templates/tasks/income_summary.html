@@ -1,17 +1,36 @@
 {% extends 'base.html' %}
+
 {% block content %}
 <div class="container my-5">
     <h2>Income Summary</h2>
 
+    <!-- Total Account Balance -->
     <p><strong>💰 Total Account Balance:</strong> <span style="color: green;">USD {{ total_income }}</span></p>
+
+    <!-- Referral Earnings -->
+    <p><strong>🎁 Referral Earnings:</strong> <span style="color: blue;">USD {{ referral_income }}</span></p>
+
+    <!-- Earnings Breakdown -->
     <p><strong>📅 Today's Income:</strong> USD {{ today_income }}</p>
     <p><strong>📆 This Week's Income:</strong> USD {{ week_income }}</p>
     <p><strong>📅 This Month's Income:</strong> USD {{ month_income }}</p>
 
+    <!-- Referral Section -->
+    <div class="card my-4">
+        <div class="card-body">
+            <h4>📢 Invite & Earn</h4>
+            <p>💰 Earn USD {{ user.userprofile.plan.invitation_commission }} for every friend you invite who registers and logs in!</p>
+            <p><strong>🔗 Your Referral Code:</strong> <span id="referral_code">{{ user.userprofile.referral_code }}</span></p>
+            <p><strong>📨 Invite Link:</strong> <a href="{{ invite_url }}" target="_blank">{{ invite_url }}</a></p>
+        </div>
+    </div>
+
+    <!-- Income Chart -->
     <h3>Earnings Over the Last 7 Days</h3>
     <canvas id="incomeChart"></canvas>
 </div>
 
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     var ctx = document.getElementById('incomeChart').getContext('2d');
