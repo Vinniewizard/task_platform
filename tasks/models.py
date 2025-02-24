@@ -47,6 +47,7 @@ class UserProfile(models.Model):
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     country = models.CharField(max_length=100, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
+    referral_count = models.IntegerField(default=0)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     # ✅ Referral System Fields
@@ -68,12 +69,18 @@ class UserProfile(models.Model):
 
     # ✅ Earnings & Commissions
     total_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # ✅ New fields for income tracking
+    daily_income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    weekly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    monthly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     class Meta:
         verbose_name = "User Profile"
         verbose_name_plural = "User Profiles"
 
     def save(self, *args, **kwargs):
+        # Generate referral code if not exists
         if not self.referral_code:
             self.referral_code = str(uuid.uuid4().hex[:8])  # Generate unique referral code
         super().save(*args, **kwargs)
@@ -81,27 +88,28 @@ class UserProfile(models.Model):
     def __str__(self):
         return self.user.username
 
-    # ✅ Income Summary Methods
-    def get_income_summary(self):
+    def update_income(self, reward, task_date):
+        """ Update daily, weekly, and monthly income based on task completion date """
         today = timezone.now().date()
-        week_start = today - timedelta(days=today.weekday())  # Start of the week
-        month_start = today.replace(day=1)  # Start of the month
+        start_of_week = today - timezone.timedelta(days=today.weekday())
+        start_of_month = today.replace(day=1)
 
-        # Fetch earnings from Income model
-        today_income = self.user.income_set.filter(timestamp__date=today).aggregate(Sum('amount'))['amount__sum'] or 0
-        week_income = self.user.income_set.filter(timestamp__gte=week_start).aggregate(Sum('amount'))['amount__sum'] or 0
-        month_income = self.user.income_set.filter(timestamp__gte=month_start).aggregate(Sum('amount'))['amount__sum'] or 0
+        # Update Daily Income
+        if task_date == today:
+            self.daily_income += reward
 
-        return {
-            'today_income': today_income,
-            'week_income': week_income,
-            'month_income': month_income,
-        }
+        # Update Weekly Income
+        if task_date >= start_of_week:
+            self.weekly_income += reward
 
-    # ✅ Referral Count
-    def referral_count(self):
-        return UserProfile.objects.filter(referred_by=self).count()
+        # Update Monthly Income
+        if task_date >= start_of_month:
+            self.monthly_income += reward
 
+        # Update Total Commission
+        self.total_commission += reward
+
+        self.save()  # Save the updated values
 
 class Plan(models.Model):
     name = models.CharField(max_length=100)
@@ -121,16 +129,47 @@ class Plan(models.Model):
 # TASKS & TRANSACTIONS
 # ---------------------------
 class Task(models.Model):
-    title = models.CharField(max_length=255)
-    description = models.TextField()
-    status = models.CharField(max_length=20, choices=[("pending", "Pending"), ("completed", "Completed")])
-    reward = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Add this field
-    created_at = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    reward = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=[("pending", "Pending"), ("completed", "Completed")])
+    completed_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return self.title
+    def complete_task(self):
+        if self.status == 'completed':
+            user_profile = self.user.userprofile
+            
+            # Update total balance
+            user_profile.balance += self.reward
+            
+            # Calculate daily, weekly, and monthly income
+            today = timezone.now().date()
+            start_of_week = today - timedelta(days=today.weekday())
+            start_of_month = today.replace(day=1)
 
+            # Daily Income
+            if self.completed_at.date() == today:
+                user_profile.daily_income += self.reward
+            
+            # Weekly Income
+            if self.completed_at.date() >= start_of_week:
+                user_profile.weekly_income += self.reward
+            
+            # Monthly Income
+            if self.completed_at.date() >= start_of_month:
+                user_profile.monthly_income += self.reward
+
+            # Update total commission (optional, if needed)
+            user_profile.total_commission += self.reward
+
+            # Save the profile after updates
+            user_profile.save()
+
+            # Log the income
+            Income.objects.create(
+                user=self.user,
+                amount=self.reward,
+                source="Task Reward"
+            )
 
 class Transaction(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)

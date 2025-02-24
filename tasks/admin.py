@@ -69,19 +69,19 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone_number', 'balance', 'referral_count', 'today_income', 'week_income', 'month_income', 'total_commission')
 
     def referral_count(self, obj):
-        return obj.referral_count()
+        return obj.referral_count
     referral_count.short_description = "Referrals"
 
     def today_income(self, obj):
-        return obj.get_income_summary()['today_income']
+        return obj.daily_income
     today_income.short_description = "Today's Income"
 
     def week_income(self, obj):
-        return obj.get_income_summary()['week_income']
+        return obj.weekly_income
     week_income.short_description = "Weekly Income"
 
     def month_income(self, obj):
-        return obj.get_income_summary()['month_income']
+        return obj.monthly_income
     month_income.short_description = "Monthly Income"
 
 admin.site.register(UserProfile, UserProfileAdmin)
