@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from tasks.models import UserProfile
 
+
 class Command(BaseCommand):
     help = "Reset daily counters for all user profiles"
 

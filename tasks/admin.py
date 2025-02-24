@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import UserProfile, Task, Transaction, Plan, CommissionTransaction
 from .models import Withdrawal, DepositRequest, WithdrawalRequest
+from django.utils import timezone
 
 @admin.action(description="Approve selected deposits")
 def approve_deposits(modeladmin, request, queryset):
@@ -65,11 +66,22 @@ admin.site.register(Transaction)
 admin.site.register(Plan)
 
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'phone_number', 'balance', 'referral_count')
+    list_display = ('user', 'phone_number', 'balance', 'referral_count', 'today_income', 'week_income', 'month_income', 'total_commission')
 
     def referral_count(self, obj):
-        return UserProfile.objects.filter(referred_by=obj).count()
+        return obj.referral_count()
     referral_count.short_description = "Referrals"
 
-# ✅ Fix: Only register UserProfile once
+    def today_income(self, obj):
+        return obj.get_income_summary()['today_income']
+    today_income.short_description = "Today's Income"
+
+    def week_income(self, obj):
+        return obj.get_income_summary()['week_income']
+    week_income.short_description = "Weekly Income"
+
+    def month_income(self, obj):
+        return obj.get_income_summary()['month_income']
+    month_income.short_description = "Monthly Income"
+
 admin.site.register(UserProfile, UserProfileAdmin)

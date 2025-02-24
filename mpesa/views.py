@@ -103,7 +103,7 @@ def initiate_stk_push(request):
         # Generate M-Pesa Password
         shortcode = settings.MPESA_CONFIG["BUSINESS_SHORTCODE"]
         passkey = settings.MPESA_CONFIG["PASSKEY"]
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
         password = base64.b64encode(f"{shortcode}{passkey}{timestamp}".encode()).decode("utf-8")
 
         # STK Push Payload

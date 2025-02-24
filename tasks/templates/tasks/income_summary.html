@@ -1,33 +1,65 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container my-5">
-    <h2>Income Summary</h2>
+<div class="container my-5 py-5 shadow-lg rounded-lg" style="background-color: #ffffff; max-width: 900px;">
+
+    <!-- Heading -->
+    <h2 class="text-center text-primary mb-4">Income Summary</h2>
 
     <!-- Total Account Balance -->
-    <p><strong>💰 Total Account Balance:</strong> <span style="color: green;">USD {{ total_income }}</span></p>
-
-    <!-- Referral Earnings -->
-    <p><strong>🎁 Referral Earnings:</strong> <span style="color: blue;">USD {{ referral_income }}</span></p>
+    <div class="mb-4">
+        <p><strong>💰 Total Account Balance:</strong> <span style="color: green; font-weight: bold; font-size: 1.2rem;">USD {{ total_income }}</span></p>
+    </div>
 
     <!-- Earnings Breakdown -->
-    <p><strong>📅 Today's Income:</strong> USD {{ today_income }}</p>
-    <p><strong>📆 This Week's Income:</strong> USD {{ week_income }}</p>
-    <p><strong>📅 This Month's Income:</strong> USD {{ month_income }}</p>
-
-    <!-- Referral Section -->
-    <div class="card my-4">
-        <div class="card-body">
-            <h4>📢 Invite & Earn</h4>
-            <p>💰 Earn USD {{ user.userprofile.plan.invitation_commission }} for every friend you invite who registers and logs in!</p>
-            <p><strong>🔗 Your Referral Code:</strong> <span id="referral_code">{{ user.userprofile.referral_code }}</span></p>
-            <p><strong>📨 Invite Link:</strong> <a href="{{ invite_url }}" target="_blank">{{ invite_url }}</a></p>
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <p><strong>📅 Today's Income:</strong> USD {{ today_income }}</p>
+        </div>
+        <div class="col-md-4 mb-3">
+            <p><strong>📆 This Week's Income:</strong> USD {{ week_income }}</p>
+        </div>
+        <div class="col-md-4 mb-3">
+            <p><strong>📅 This Month's Income:</strong> USD {{ month_income }}</p>
         </div>
     </div>
 
-    <!-- Income Chart -->
-    <h3>Earnings Over the Last 7 Days</h3>
-    <canvas id="incomeChart"></canvas>
+    <!-- Referral Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h4>📢 Invite & Earn</h4>
+            <p>💰 Earn <strong>USD {{ referral_commission }}</strong> for every friend you invite who registers and logs in!</p>
+            <p><strong>🔗 Your Referral Code:</strong> <span id="referral_code">{{ referral_code }}</span></p>
+            <p><strong>📨 Invite Link:</strong> <input type="text" value="{{ invite_url }}" id="invite_link" readonly class="form-control mb-3"></p>
+            <button onclick="copyReferralLink()" class="btn btn-success btn-block rounded-pill">
+                <i class="fas fa-copy"></i> Copy Invite Link
+            </button>
+        </div>
+    </div>
+
+    <!-- User Plan Details -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h4>📜 Active Plan</h4>
+            <p><strong>Name:</strong> {{ user_plan.name }}</p>
+            <p><strong>Activation Fee:</strong> USD {{ user_plan.activation_fee }}</p>
+            <p><strong>Daily Mines:</strong> {{ user_plan.daily_mines }}</p>
+            <p><strong>Reward per Mine:</strong> USD {{ user_plan.reward_per_mine }}</p>
+            <p><strong>Daily Ads:</strong> {{ user_plan.daily_ads }}</p>
+            <p><strong>Reward per Ad:</strong> USD {{ user_plan.reward_per_ad }}</p>
+            <p><strong>Membership Duration:</strong> {{ user_plan.membership_duration }} days</p>
+            <p><strong>Invitation Commission:</strong> USD {{ user_plan.invitation_commission }}</p>
+        </div>
+    </div>
+
+    <!-- Income Chart Section -->
+    <h3 class="text-center my-4">📈 Earnings Over the Last 7 Days</h3>
+    <div class="card mb-5">
+        <div class="card-body">
+            <canvas id="incomeChart"></canvas>
+        </div>
+    </div>
+
 </div>
 
 <!-- Chart.js -->
@@ -40,14 +72,88 @@
             labels: {{ labels|safe }},
             datasets: [{
                 label: 'Income Over the Last 7 Days (USD)',
-                data: {{ data|safe }},
-                borderColor: 'blue',
-                fill: false
+                data: {{ earnings_data|safe }},
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                fill: true
             }]
         },
         options: {
-            responsive: true
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
         }
     });
+
+    // Copy Referral Link
+    function copyReferralLink() {
+        var copyText = document.getElementById("invite_link");
+        copyText.select();
+        document.execCommand("copy");
+        alert("Referral link copied to clipboard!");
+    }
 </script>
+
+{% block extra_styles %}
+    <style>
+        /* Additional custom styles */
+        body {
+            background-color: #f7f7f7;
+        }
+
+        .card-body {
+            font-size: 1rem;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+        }
+
+        .shadow-lg {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .rounded-pill {
+            border-radius: 50px;
+        }
+
+        .form-control {
+            border-radius: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+
+        h4 {
+            color: #007bff;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        h2, h3 {
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 900px;
+        }
+
+        .alert {
+            font-size: 1rem;
+            font-weight: normal;
+        }
+    </style>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+{% endblock %}
 {% endblock %}

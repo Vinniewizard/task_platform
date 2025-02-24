@@ -6,5 +6,5 @@ def reset_tasks():
     Resets all user tasks daily at midnight.
     """
     Task.objects.all().update(status="pending")  # Reset status
-    print(f"Tasks reset at {datetime.now()}")  # Log when it runs
+    print(f"Tasks reset at {timezone.now()}")  # Log when it runs
 

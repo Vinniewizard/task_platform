@@ -1,7 +1,15 @@
+import uuid
 from django.db import models
 from django.conf import settings
 from decimal import Decimal
 from django.contrib.auth.models import User
+from django.utils.timezone import timezone
+from datetime import timedelta
+from django.db.models import Sum
+from datetime import date
+from django.utils import timezone
+
+
 # ---------------------------
 # CONSTANTS
 # ---------------------------
@@ -33,8 +41,6 @@ PAYMENT_METHOD_CHOICES = [
 ]
 
 # ---------------------------
-# USER PROFILE
-# ---------------------------
 class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     phone_number = models.CharField(max_length=15, unique=True, null=True, blank=True)
@@ -42,23 +48,26 @@ class UserProfile(models.Model):
     country = models.CharField(max_length=100, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+
     # ✅ Referral System Fields
     referral_code = models.CharField(max_length=10, unique=True, null=True, blank=True)
-    referred_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True)
+    referred_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="referrals")
 
     wallet_address = models.CharField(max_length=255, null=True, blank=True)
 
-    # Plan Subscription
+    # ✅ Plan Subscription
     plan = models.ForeignKey("Plan", on_delete=models.SET_NULL, null=True, blank=True)
-    
-    # Daily task counters
+
+    # ✅ Daily task counters
     mines_today = models.IntegerField(default=0)
     last_mine_date = models.DateField(null=True, blank=True)
     ads_activated = models.BooleanField(default=False)
     ads_watched_today = models.IntegerField(default=0)
     last_ad_date = models.DateField(null=True, blank=True)
     plan_activation_date = models.DateField(null=True, blank=True)
+
+    # ✅ Earnings & Commissions
+    total_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     class Meta:
         verbose_name = "User Profile"
@@ -71,6 +80,29 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user.username
+
+    # ✅ Income Summary Methods
+    def get_income_summary(self):
+        today = timezone.now().date()
+        week_start = today - timedelta(days=today.weekday())  # Start of the week
+        month_start = today.replace(day=1)  # Start of the month
+
+        # Fetch earnings from Income model
+        today_income = self.user.income_set.filter(timestamp__date=today).aggregate(Sum('amount'))['amount__sum'] or 0
+        week_income = self.user.income_set.filter(timestamp__gte=week_start).aggregate(Sum('amount'))['amount__sum'] or 0
+        month_income = self.user.income_set.filter(timestamp__gte=month_start).aggregate(Sum('amount'))['amount__sum'] or 0
+
+        return {
+            'today_income': today_income,
+            'week_income': week_income,
+            'month_income': month_income,
+        }
+
+    # ✅ Referral Count
+    def referral_count(self):
+        return UserProfile.objects.filter(referred_by=self).count()
+
+
 class Plan(models.Model):
     name = models.CharField(max_length=100)
     activation_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -83,6 +115,7 @@ class Plan(models.Model):
 
     def __str__(self):
         return self.name
+
 
 # ---------------------------
 # TASKS & TRANSACTIONS
@@ -97,6 +130,8 @@ class Task(models.Model):
 
     def __str__(self):
         return self.title
+
+
 class Transaction(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -131,6 +166,7 @@ class WithdrawalRequest(models.Model):
     class Meta:
         verbose_name_plural = "Withdrawal Requests"
 
+
 class Withdrawal(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="withdrawals")
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -143,6 +179,8 @@ class Withdrawal(models.Model):
 
     class Meta:
         verbose_name_plural = "Withdrawals"
+
+
 class DepositRequest(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -201,4 +239,4 @@ class Income(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     source = models.CharField(max_length=100, default="Task Reward")
-    timestamp = models.DateTimeField(auto_now_add=True)  # Use this field for filtering
+    timestamp = models.DateTimeField(auto_now_add=True)  # This should be present

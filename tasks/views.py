@@ -2,6 +2,7 @@ import random
 import time
 import datetime
 import logging
+from django.utils import timezone
 
 from decimal import Decimal, InvalidOperation
 
@@ -48,7 +49,8 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from .models import Withdrawal  # Ensure correct model import
 from django.utils.timezone import now, timedelta
-
+from django.db import transaction
+import uuid
 
 
 @shared_task
@@ -555,71 +557,90 @@ def logout_view(request):
     messages.info(request, "You have been logged out.")
     return redirect('home')
 
+# You can define your exchange rates here or fetch them from an API
+EXCHANGE_RATES = {
+    'KSH': 130.00,  # Example: 1 USD = 130 KSH
+    'EUR': 0.92,    # Example: 1 USD = 0.92 EUR
+    'GBP': 0.80,    # Example: 1 USD = 0.80 GBP
+    # Add more currencies if needed
+}
+
 def currency_converter(request):
-    """
-    A simple view to convert USD to another currency.
-    Assumes a conversion rate of 1 unit = 100 USD.
-    """
-    result = None
-    error = None
-    USD_amount = None
-    conversion_rate = Decimal('100')
-    if request.method == "POST":
-        USD_str = request.POST.get("USD")
+    converted_value = None
+    currency = None
+    if request.method == 'POST':
         try:
-            USD_amount = Decimal(USD_str)
-            result = USD_amount / conversion_rate
-        except (InvalidOperation, TypeError):
-            error = "Please enter a valid amount in USD."
-    return render(request, "tasks/currency_converter.html", {
-        "result": result,
-        "error": error,
-        "USD_amount": USD_amount,
-    })
+            amount_usd = float(request.POST.get('usd_amount'))
+            currency = request.POST.get('currency')
 
-@login_required
+            # Convert the USD value based on selected currency
+            if currency and currency in EXCHANGE_RATES:
+                converted_value = round(amount_usd * EXCHANGE_RATES[currency], 2)
+
+            context = {
+                'amount_usd': amount_usd,
+                'converted_value': converted_value,
+                'currency': currency,
+                'currencies': EXCHANGE_RATES
+            }
+        except ValueError:
+            context = {'error': "Invalid input. Please enter a valid number."}
+
+        return render(request, 'tasks/currency_converter.html', context)
+
+    # Preload the currencies when the page is loaded (for the dropdown)
+    context = {
+        'currencies': EXCHANGE_RATES
+    }
+    return render(request, 'tasks/currency_converter.html', context)
+
 def income_summary(request):
-    user = request.user  # Get the logged-in User instance
+    user_profile = UserProfile.objects.get(user=request.user)
+    user_plan = user_profile.plan  # Get the user's plan
 
-    try:
-        user_profile = UserProfile.objects.get(user=user)  # Get the associated UserProfile
-    except UserProfile.DoesNotExist:
-        return render(request, 'tasks/income_summary.html', {'error': 'User profile not found.'})
+    # Total balance
+    total_income = user_profile.balance
 
-    total_income = user_profile.balance  # Retrieve account balance from UserProfile
-
-    # Get current date ranges
+    # Get current date
     today = now().date()
     week_start = today - timedelta(days=today.weekday())  # Start of the week
     month_start = today.replace(day=1)  # Start of the month
-    last_7_days = today - timedelta(days=6)  # Last 7 days
 
-    # Use `user` instead of `user_profile`
-    today_income = Income.objects.filter(user=user, timestamp__date=today).aggregate(Sum('amount'))['amount__sum'] or 0
-    week_income = Income.objects.filter(user=user, timestamp__date__gte=week_start).aggregate(Sum('amount'))['amount__sum'] or 0
-    month_income = Income.objects.filter(user=user, timestamp__date__gte=month_start).aggregate(Sum('amount'))['amount__sum'] or 0
+    # Calculate income
+    today_income = Income.objects.filter(user=request.user, timestamp__date=today).aggregate(total=Sum("amount"))["total"] or 0
+    week_income = Income.objects.filter(user=request.user, timestamp__gte=week_start).aggregate(total=Sum("amount"))["total"] or 0
+    month_income = Income.objects.filter(user=request.user, timestamp__gte=month_start).aggregate(total=Sum("amount"))["total"] or 0
 
-    # Earnings for the last 7 days
-    daily_income = (
-        Income.objects.filter(user=user, timestamp__date__gte=last_7_days)
-        .values('timestamp__date')
-        .annotate(total=Sum('amount'))
-        .order_by('timestamp__date')
-    )
+    # Referral commission from the user's plan
+    referral_commission = user_plan.invitation_commission if user_plan else 0
 
-    labels = [entry['timestamp__date'].strftime('%Y-%m-%d') for entry in daily_income]
-    data = [float(entry['total']) for entry in daily_income]
+    # Generate invite link
+    base_url = request.build_absolute_uri('/')
+    invite_url = f"{base_url}tasks/register/?referral_code={user_profile.referral_code}"
+
+    # Fetch earnings data for the last 7 days
+    last_7_days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    labels = [day.strftime("%b %d") for day in last_7_days]
+    earnings_data = []
+    
+    for day in last_7_days:
+        total_earning = Income.objects.filter(user=request.user, timestamp__date=day).aggregate(total=Sum("amount"))["total"] or 0
+        earnings_data.append(total_earning)
 
     context = {
-        'total_income': total_income,
-        'today_income': today_income,
-        'week_income': week_income,
-        'month_income': month_income,
-        'labels': labels,
-        'data': data,
+        "total_income": total_income,
+        "today_income": today_income,
+        "week_income": week_income,
+        "month_income": month_income,
+        "invite_url": invite_url,
+        "referral_code": user_profile.referral_code,
+        "referral_commission": referral_commission,
+        "user_plan": user_plan,  # Pass the plan details to the template
+        "labels": labels,  # Pass labels for graph
+        "earnings_data": earnings_data,  # Pass earnings data for graph
     }
 
-    return render(request, 'tasks/income_summary.html', context)
+    return render(request, "tasks/income_summary.html", context)
 @staff_member_required
 def admin_dashboard(request):
     # Get today's date

@@ -12,7 +12,7 @@ def get_mpesa_access_token():
 # Initiate STK Push
 def stk_push_request(phone_number, amount):
     access_token = get_mpesa_access_token()
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
     password = base64.b64encode(f"{settings.MPESA_SHORTCODE}{settings.MPESA_PASSKEY}{timestamp}".encode()).decode()
 
     payload = {

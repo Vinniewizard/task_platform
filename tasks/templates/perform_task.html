@@ -10,152 +10,285 @@
   <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
+  <!-- CSRF Token (for JavaScript access) -->
   <form style="display:none;">{% csrf_token %}</form>
 
   <style>
     body {
-      text-align: center;
-      padding-top: 20px;
-      background-color: blueviolet;
+      background-color: #f4f8fc;
+      font-family: Arial, sans-serif;
     }
-    .task-container {
-      max-width: 500px;
-      margin: auto;
+
+    .navbar {
+      background-color: #5e3f8d;
+      color: white;
+    }
+
+    .navbar a {
+      color: white;
+      text-decoration: none;
+      margin: 0 15px;
+    }
+
+    .navbar a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
       padding: 20px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      background-color: rgb(64, 247, 192);
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
     }
-    .app-card, .ad-card {
-      border: 1px solid #ddd;
-      padding: 10px;
-      margin: 10px;
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+
+    .task-container {
       background-color: #f9f9f9;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
-    .btn {
-      padding: 8px 15px;
-      background-color: blue;
+
+    .completion-message {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #4CAF50;
+    }
+
+    .task-item {
+      background: #fff;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .task-item button {
+      background-color: #28a745;
       color: white;
       border: none;
+      padding: 5px 10px;
       cursor: pointer;
+      border-radius: 4px;
     }
-    .countdown {
-      font-size: 20px;
+
+    .task-item button:hover {
+      background-color: #218838;
+    }
+
+    .task-item span {
+      font-size: 16px;
+    }
+
+    .status-message {
+      color: #e74c3c;
       font-weight: bold;
-      color: red;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1 class="my-3">Task Page</h1>
 
-    <div class="task-container">
-      <h2>Your Balance: $ <span id="balance-display">{{ user.userprofile.balance }}</span></h2>
+<nav class="navbar navbar-expand-lg navbar-light">
+  <a class="navbar-brand" href="#">Task Page</a>
+  <div class="navbar-nav ml-auto">
+    <a class="nav-link" href="{% url 'income_summary' %}">Income Summary</a>
+    <a class="nav-link" href="{% url 'choose_plan' %}">Upgrade Plan</a>
+  </div>
+</nav>
 
-      <button id="mine-btn" class="btn btn-primary"><b>Mine Now</b></button>
-      <p id="countdownDisplay" class="countdown mt-2"></p>
+<div class="container">
+  <h1>Perform Tasks</h1>
+  <div class="task-container">
+    {% if not user.userprofile.plan %}
+      <h3>You have not chosen a plan yet!</h3>
+      <p>Please <a href="{% url 'choose_plan' %}">choose your plan</a> to start earning.</p>
+    {% else %}
+      <div class="apps-list" id="apps-list">
+        <h3>Virtual Apps to Download</h3>
+      </div>
 
-      <button id="activate-ads-btn" class="btn btn-warning"><b>Activate Ads (Pay $2)</b></button>
+      <div class="ads-list" id="ads-list">
+        <h3>Virtual Ads to Watch</h3>
+      </div>
 
-      <button id="watch-ad-btn" class="btn btn-success"><b>Watch Ads </b></button>
-
-      <div id="status-message" style="color: red; font-weight: bold;"></div>
-    </div>
-
-    <!-- Virtual Apps -->
-    <h3>Download & Earn</h3>
-    <div id="apps-container">
-      {% for app in apps %}
-        <div class="app-card">
-          <p><b>{{ app.name }}</b></p>
-          <a href="{{ app.download_link }}" class="btn" onclick="confirmDownload('{{ app.id }}')">Download & Earn {{ app.reward }}</a>
-        </div>
-      {% endfor %}
-    </div>
-
-    <!-- Ads -->
-    <h3>Watch & Earn</h3>
-    <div id="ads-container">
-      {% for ad in ads %}
-        <div class="ad-card">
-          <p><b>{{ ad.title }}</b></p>
-          <video width="300" height="200" controls>
-            <source src="{{ ad.video_url }}" type="video/mp4">
-          </video>
-          <button class="btn" onclick="watchAd('{{ ad.id }}', {{ ad.duration }})">Watch & Earn {{ ad.reward }}</button>
-        </div>
-      {% endfor %}
-    </div>
+      <div id="completion-message" class="completion-message" style="display:none;">
+        Congratulations! You have completed today's tasks.
+      </div>
+    {% endif %}
+    <div id="status-message" class="status-message"></div>
   </div>
 
-  <!-- Bootstrap JS -->
-  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <div class="col-md-4 mb-4">
+    <a href="{% url 'home' %}" class="btn btn-lg btn-danger btn-block py-3">Back to Dashboard</a>
+  </div>
+</div>
 
-  <script>
-    function getCSRFToken() {
-      return document.querySelector('[name=csrfmiddlewaretoken]').value;
+<!-- Bootstrap JS -->
+<script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+<script>
+  function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+  }
+
+  function updateBalance(newBalance) {
+    console.log("Updated balance:", newBalance);
+  }
+
+  {% if user.userprofile.plan %}
+    const virtualApps = [
+      "Speedy Messenger", "Galaxy Browser", "Magic Puzzle",
+      "Crypto Tracker", "Virtual VPN", "Zen Fitness", "Photo Magic"
+    ];
+
+    const virtualAds = [
+      "Ad: Amazing Shoes", "Ad: Super Car", "Ad: Discount Flights",
+      "Ad: New Smartphone", "Ad: Healthy Snacks", "Ad: Exclusive Watches", "Ad: Premium Headphones"
+    ];
+
+    const minesLeft = {{ daily_mines|default:0 }} - {{ mines_done|default:0 }};
+    const adsLeft = {{ daily_ads|default:0 }} - {{ ads_watched|default:0 }};
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const appsListDiv = document.getElementById("apps-list");
+      const adsListDiv = document.getElementById("ads-list");
+
+      appsListDiv.innerHTML = "<h3>Virtual Apps to Download</h3>";
+      adsListDiv.innerHTML = "<h3>Virtual Ads to Watch</h3>";
+
+      if (minesLeft <= 0) {
+        appsListDiv.innerHTML += "<p>No apps available for download today.</p>";
+      }
+      if (adsLeft <= 0) {
+        adsListDiv.innerHTML += "<p>No ads available for watching today.</p>";
+      }
+      if (minesLeft <= 0 && adsLeft <= 0) {
+        document.getElementById("completion-message").style.display = "block";
+        return;
+      }
+
+      let apps = [...virtualApps].sort(() => Math.random() - 0.5).slice(0, minesLeft);
+      let ads = [...virtualAds].sort(() => Math.random() - 0.5).slice(0, adsLeft);
+
+      apps.forEach(appName => {
+        const appItem = createTaskItem(appName, "Download", simulateAppDownload);
+        appsListDiv.appendChild(appItem);
+      });
+      ads.forEach(adName => {
+        const adItem = createTaskItem(adName, "Watch", simulateAdWatch);
+        adsListDiv.appendChild(adItem);
+      });
+    });
+
+    function createTaskItem(name, actionText, actionFunction) {
+      const container = document.createElement("div");
+      container.className = "task-item";
+      container.innerHTML = `
+        <span>${name}</span>
+        <button class="btn">${actionText}</button>
+      `;
+      const button = container.querySelector("button");
+      button.addEventListener("click", () => actionFunction(container, name, button));
+      return container;
     }
 
-    function updateBalance(newBalance) {
-      document.getElementById("balance-display").innerText = newBalance;
-    }
-
-    function confirmDownload(appId) {
-      alert("Download started. Complete installation to earn rewards.");
-      fetch(`/api/reward-download/${appId}/`)
-        .then(response => response.json())
-        .then(data => alert(data.message));
-    }
-
-    function watchAd(adId, duration) {
-      alert("Watching ad... Please wait " + duration + " seconds.");
-      setTimeout(() => {
-        fetch(`/api/reward-ad/${adId}/`)
-          .then(response => response.json())
-          .then(data => alert(data.message));
-      }, duration * 1000);
-    }
-
-    document.getElementById("mine-btn").addEventListener("click", function() {
-      var button = this;
-      var countdownDisplay = document.getElementById("countdownDisplay");
-      var statusMessage = document.getElementById("status-message");
-
+    function simulateAppDownload(container, appName, button) {
       button.disabled = true;
-      statusMessage.innerText = "Processing mining task...";
+      let seconds = 20;
+      button.textContent = `Downloading... ${seconds}s`;
+      const interval = setInterval(() => {
+        seconds--;
+        button.textContent = `Downloading... ${seconds}s`;
+        if (seconds <= 0) {
+          clearInterval(interval);
+          callMineEndpoint(button);
+          container.remove();
+          checkCompletion();
+        }
+      }, 1000);
+    }
 
+    function simulateAdWatch(container, adName, button) {
+      button.disabled = true;
+      const watchTime = Math.floor(Math.random() * 26) + 5;
+      let seconds = watchTime;
+      button.textContent = `Watching... ${seconds}s`;
+      const interval = setInterval(() => {
+        seconds--;
+        button.textContent = `Watching... ${seconds}s`;
+        if (seconds <= 0) {
+          clearInterval(interval);
+          callWatchAdEndpoint(button);
+          container.remove();
+          checkCompletion();
+        }
+      }, 1000);
+    }
+
+    function callMineEndpoint(button) {
       fetch("/tasks/mine/", {
         method: "POST",
-        headers: { "X-CSRFToken": getCSRFToken(), "Content-Type": "application/json" }
+        headers: {
+          "X-CSRFToken": getCSRFToken(),
+          "Content-Type": "application/json"
+        }
       })
       .then(response => response.json())
       .then(data => {
         if (data.status === "success") {
-          alert("Mining successful! You earned $ " + data.reward);
+          alert("You earned $ " + data.reward + " from this download!");
           updateBalance(data.balance);
-          let seconds = 10;
-          countdownDisplay.textContent = "Please wait " + seconds + " seconds...";
-          let countdownInterval = setInterval(() => {
-            seconds--;
-            countdownDisplay.textContent = "Please wait " + seconds + " seconds...";
-            if (seconds <= 0) {
-              clearInterval(countdownInterval);
-              countdownDisplay.textContent = "";
-              button.disabled = false;
-            }
-          }, 1000);
-        } else {
-          statusMessage.innerText = data.message || "An error occurred.";
-          button.disabled = false;
         }
       })
       .catch(error => {
-        console.error("Error:", error);
-        statusMessage.innerText = "Error during mining.";
+        console.error(error);
+        alert("Error during the task simulation.");
         button.disabled = false;
       });
-    });
-  </script>
+    }
+
+    function callWatchAdEndpoint(button) {
+      fetch("/tasks/watch_ad/", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCSRFToken(),
+          "Content-Type": "application/json"
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === "success") {
+          alert("You earned $ " + data.reward + " from watching this ad!");
+          updateBalance(data.balance);
+        }
+      })
+      .catch(error => {
+        console.error(error);
+        alert("Error during the ad simulation.");
+        button.disabled = false;
+      });
+    }
+
+    function checkCompletion() {
+      const remainingApps = document.getElementById("apps-list").querySelectorAll(".task-item").length;
+      const remainingAds = document.getElementById("ads-list").querySelectorAll(".task-item").length;
+      if (remainingApps === 0 && remainingAds === 0) {
+        document.getElementById("completion-message").style.display = "block";
+      }
+    }
+  {% endif %}
+</script>
+
 </body>
 </html>
