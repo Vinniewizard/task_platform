@@ -5,8 +5,9 @@ from .views import (
     mine, activate_ads, watch_ad, start_task, perform_task,
     deposit, withdrawal, request_withdrawal, choose_plan,
     invite, contact_support, logout_view, currency_converter,
-    income_summary, get_random_withdrawal,reset_tasks_view
+    income_summary, get_random_withdrawal,
 )
+from .views import reset_tasks_view  # Ensure this import is correc
 
 urlpatterns = [
     path('home/', home, name='home'),
