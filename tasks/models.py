@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from decimal import Decimal
-
+from django.contrib.auth.models import User
 # ---------------------------
 # CONSTANTS
 # ---------------------------
@@ -46,6 +46,9 @@ class UserProfile(models.Model):
     referred_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True)
     wallet_address = models.CharField(max_length=255, null=True, blank=True)
 
+    # Plan Subscription
+    plan = models.ForeignKey("Plan", on_delete=models.SET_NULL, null=True, blank=True)  # ✅ Added this line
+
     # Daily task counters
     mines_today = models.IntegerField(default=0)
     last_mine_date = models.DateField(null=True, blank=True)
@@ -60,11 +63,6 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user.username
-
-
-# ---------------------------
-# PLAN
-# ---------------------------
 class Plan(models.Model):
     name = models.CharField(max_length=100)
     activation_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -78,21 +76,19 @@ class Plan(models.Model):
     def __str__(self):
         return self.name
 
-
 # ---------------------------
 # TASKS & TRANSACTIONS
 # ---------------------------
 class Task(models.Model):
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="tasks")
     title = models.CharField(max_length=255)
-    description = models.TextField(default="Default description")
+    description = models.TextField()
+    status = models.CharField(max_length=20, choices=[("pending", "Pending"), ("completed", "Completed")])
+    reward = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Add this field
     created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, default="pending")
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.title
-
-
 class Transaction(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -103,19 +99,29 @@ class Transaction(models.Model):
         return f"{self.user.user.username} - {self.amount}"
 
 
+class CommissionTransaction(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.user.username} - {self.amount}"
+
 
 # ---------------------------
 # WITHDRAWALS & DEPOSITS
 # ---------------------------
 class WithdrawalRequest(models.Model):
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="withdrawal_requests")
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.user.username} - {self.amount} ({self.status})"
+        return f"{self.user.user.username} - ${self.amount} ({self.status})"
 
+    class Meta:
+        verbose_name_plural = "Withdrawal Requests"
 
 class Withdrawal(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="withdrawals")
@@ -125,9 +131,10 @@ class Withdrawal(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.user.username} - {self.amount} ({self.status})"
+        return f"{self.user.user.username} - ${self.amount} ({self.status})"
 
-
+    class Meta:
+        verbose_name_plural = "Withdrawals"
 class DepositRequest(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -183,10 +190,7 @@ class Ad(models.Model):
 
 
 class Income(models.Model):
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="income_records")
-    amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    source = models.CharField(max_length=255, blank=True, null=True)  # e.g., "Task Reward", "Referral Bonus"
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.user.user.username} - {self.amount} ({self.source})"
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    source = models.CharField(max_length=100, default="Task Reward")
+    timestamp = models.DateTimeField(auto_now_add=True)  # Use this field for filtering

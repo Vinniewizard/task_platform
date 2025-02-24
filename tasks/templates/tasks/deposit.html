@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deposit via M-Pesa</title>
+    <title>Deposit Confirmation</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -20,20 +20,31 @@
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            width: 300px;
+            width: 380px;
             text-align: center;
         }
 
         h2 {
             font-size: 24px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             color: #333;
         }
 
-        input[type="text"], input[type="number"] {
+        .form-group {
+            text-align: left;
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+        }
+
+        select, input {
             width: 100%;
-            padding: 12px;
-            margin: 10px 0;
+            padding: 10px;
+            margin-top: 5px;
             border-radius: 4px;
             border: 1px solid #ccc;
             font-size: 16px;
@@ -48,6 +59,7 @@
             color: white;
             font-size: 18px;
             cursor: pointer;
+            margin-top: 10px;
         }
 
         button:hover {
@@ -63,42 +75,123 @@
             color: green;
             font-size: 14px;
         }
+
+        .instructions {
+            display: none;
+            text-align: left;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #333;
+            margin-top: 15px;
+        }
+
+        .instructions h3 {
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: #000;
+        }
+
+        .instructions p {
+            margin: 5px 0;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #d9534f;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Deposit via M-Pesa</h2>
+        <h2>Confirm Your Deposit</h2>
+        <p style="font-size: 14px; color: #555;">After making the deposit, enter your details below for admin approval.</p>
+
         <form id="depositForm">
-            <input type="text" id="phone_number" placeholder="Enter Phone Number" required>
-            <input type="number" id="amount" placeholder="Enter Amount" required>
-            <button type="submit">Deposit</button>
+            <div class="form-group">
+                <label for="deposit_method">Deposit Method:</label>
+                <select id="deposit_method" required>
+                    <option value="">Select Deposit Method</option>
+                    <option value="mpesa">M-Pesa Till Number</option>
+                    <option value="airtel">Airtel Money</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="phone_number">Your Phone Number:</label>
+                <input type="text" id="phone_number" placeholder="Enter Your Phone Number" required>
+            </div>
+
+            <div class="form-group">
+                <label for="amount">Amount Deposited:</label>
+                <input type="number" id="amount" placeholder="Enter Amount Deposited" required>
+            </div>
+
+            <div class="form-group">
+                <label for="mpesa_reference">M-Pesa Reference Number:</label>
+                <input type="text" id="mpesa_reference" placeholder="Enter M-Pesa Ref Number" required>
+            </div>
+
+            <button type="submit">Submit for Approval</button>
         </form>
         <div id="responseMessage"></div>
+
+        <!-- Deposit Instructions (Dynamic) -->
+        <div id="instructions_mpesa" class="instructions">
+            <h3>📌 How to Pay via M-Pesa Till Number</h3>
+            <p>1️⃣ Open your M-Pesa Menu (<span class="highlight">*334#</span> or M-Pesa App)</p>
+            <p>2️⃣ Select <strong>Lipa na M-Pesa</strong></p>
+            <p>3️⃣ Choose <strong>Buy Goods and Services</strong></p>
+            <p>4️⃣ Enter <strong>Till Number:</strong> <span class="highlight">3275274</span></p>
+            <p>5️⃣ Enter the <strong>Amount</strong></p>
+            <p>6️⃣ Enter your <strong>M-Pesa PIN</strong> to confirm</p>
+            <p>7️⃣ You will receive an SMS confirmation.</p>
+        </div>
+
+        <div id="instructions_airtel" class="instructions">
+            <h3>📌 How to Send Money to Airtel Money</h3>
+            <p>1️⃣ Open your M-Pesa Menu (<span class="highlight">*334#</span> or M-Pesa App)</p>
+            <p>2️⃣ Select <strong>Send Money</strong></p>
+            <p>3️⃣ Choose <strong>Send to Other Network</strong></p>
+            <p>4️⃣ Enter <strong>Airtel Number:</strong> <span class="highlight">0732242933</span></p>
+            <p>5️⃣ Enter the <strong>Amount</strong></p>
+            <p>6️⃣ Confirm details and enter your <strong>M-Pesa PIN</strong></p>
+            <p>7️⃣ You will receive an SMS confirmation from M-Pesa and Airtel Money.</p>
+        </div>
     </div>
 
     <script>
+        document.getElementById("deposit_method").addEventListener("change", function() {
+            let method = this.value;
+            document.getElementById("instructions_mpesa").style.display = (method === "mpesa") ? "block" : "none";
+            document.getElementById("instructions_airtel").style.display = (method === "airtel") ? "block" : "none";
+        });
+
         document.getElementById("depositForm").addEventListener("submit", function(e) {
             e.preventDefault();
+            const deposit_method = document.getElementById("deposit_method").value;
             const phone_number = document.getElementById("phone_number").value;
             const amount = document.getElementById("amount").value;
+            const mpesa_reference = document.getElementById("mpesa_reference").value;
             const responseMessage = document.getElementById("responseMessage");
 
-            if (!phone_number || !amount) {
+            if (!deposit_method || !phone_number || !amount || !mpesa_reference) {
                 responseMessage.innerHTML = "<p class='error'>Please fill in all fields.</p>";
                 return;
             }
 
-            fetch("/api/mpesa/stk_push/", {
+            fetch("/api/deposit_request/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ phone_number, amount })
+                body: JSON.stringify({ deposit_method, phone_number, amount, mpesa_reference })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.message) {
-                    responseMessage.innerHTML = `<p class='success'>${data.message}</p>`;
+                    responseMessage.innerHTML = `<p class='success'>${data.message}. Please wait for admin approval.</p>`;
                 } else {
                     responseMessage.innerHTML = `<p class='error'>${data.error || 'Something went wrong!'}</p>`;
                 }

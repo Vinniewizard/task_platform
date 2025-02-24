@@ -1,24 +1,34 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container my-5">
-    <h2 class="text-center mb-4">Income Summary</h2>
+    <h2>Income Summary</h2>
 
-    <div class="card shadow p-4 mb-4">
-        <p><strong>Total Earnings (All Users):</strong> USD {{ total_earnings }}</p>
-        <p><strong>Today's Income:</strong> USD {{ today_income }}</p>
-        <p><strong>This Week's Income:</strong> USD {{ week_income }}</p>
-        <p><strong>This Month's Income:</strong> USD {{ month_income }}</p>
+    <p><strong>💰 Total Account Balance:</strong> <span style="color: green;">USD {{ total_income }}</span></p>
+    <p><strong>📅 Today's Income:</strong> USD {{ today_income }}</p>
+    <p><strong>📆 This Week's Income:</strong> USD {{ week_income }}</p>
+    <p><strong>📅 This Month's Income:</strong> USD {{ month_income }}</p>
 
-        <hr>
-        <p><strong>Debug Info:</strong></p>
-        <p><strong>total_earnings:</strong> {{ total_earnings|default:"No Data" }}</p>
-        <p><strong>today_income:</strong> {{ today_income|default:"No Data" }}</p>
-        <p><strong>week_income:</strong> {{ week_income|default:"No Data" }}</p>
-        <p><strong>month_income:</strong> {{ month_income|default:"No Data" }}</p>
-    </div>
-
-    <div class="text-center mt-4">
-        <a href="{% url 'home' %}" class="btn btn-primary">Back to Dashboard</a>
-    </div>
+    <h3>Earnings Over the Last 7 Days</h3>
+    <canvas id="incomeChart"></canvas>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    var ctx = document.getElementById('incomeChart').getContext('2d');
+    var incomeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ labels|safe }},
+            datasets: [{
+                label: 'Income Over the Last 7 Days (USD)',
+                data: {{ data|safe }},
+                borderColor: 'blue',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+</script>
 {% endblock %}

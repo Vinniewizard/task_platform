@@ -16,11 +16,6 @@ from django.contrib.auth import login, logout
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.contrib.admin.views.decorators import staff_member_required
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.db import connection
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
 
 from .forms import RegistrationForm
 from .models import (
@@ -46,6 +41,12 @@ from django.db import models
 from django.utils.timezone import now
 from datetime import timedelta
 from .models import Income
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import connection
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from .models import Withdrawal  # Ensure correct model import
 
 
 
@@ -87,32 +88,39 @@ def mask_address(address):
 def get_random_withdrawal(request):
     """Return a random withdrawal with masked user info."""
     withdrawals = Withdrawal.objects.all()
+    print(f"Withdrawals found: {withdrawals}")  # Debugging
+
     if withdrawals.exists():
         withdrawal = random.choice(withdrawals)
-        withdrawal_method = withdrawal.withdrawal_method
-        user_profile = getattr(withdrawal.user, "userprofile", None)
+        print(f"Randomly selected withdrawal: {withdrawal}")  # Debugging
+
+        withdrawal_method = withdrawal.withdrawal_method.lower()
+        user_profile = withdrawal.user  # Fix: Withdrawal.user is already UserProfile
+
         if not user_profile:
+            print("User profile not found!")  # Debugging
             return JsonResponse({"error": "User profile not found for withdrawal."})
-        
-        masked_info = (
-            mask_phone_number(user_profile.phone_number)
-            if withdrawal_method.lower() in ["mpesa", "airtel_money"]
-            else mask_address(user_profile.wallet_address)
-        )
-        
-        message = (
-            f"💸 {masked_info} just withdrew ${withdrawal.amount} "
-            f"via {withdrawal_method.capitalize()}! 🚀"
-        )
+
+        phone_number = getattr(user_profile, "phone_number", "")
+        wallet_address = getattr(user_profile, "wallet_address", "")
+
+        if withdrawal_method in ["mpesa", "airtel_money"]:
+            masked_info = mask_phone_number(phone_number) if phone_number else "Unknown"
+        else:
+            masked_info = mask_address(wallet_address) if wallet_address else "Unknown"
+
+        message = f"💸 {masked_info} just withdrew ${withdrawal.amount} via {withdrawal_method.capitalize()}! 🚀"
+
         return JsonResponse({
-            "name": withdrawal.user.username,
+            "name": user_profile.user.username,  # Fix: Access username via UserProfile
             "amount": f"${withdrawal.amount}",
             "method": withdrawal_method.capitalize(),
             "masked_info": masked_info,
             "message": message,
         })
-    return JsonResponse({"error": "No withdrawals yet."})
 
+    print("No withdrawals found.")  # Debugging
+    return JsonResponse({"error": "No withdrawals yet."})
 def simulate_delay(seconds=10):
     """
     Simulate a delay (e.g., for a demo).
@@ -207,33 +215,40 @@ def task_page(request):
 # ------------------------
 from django.utils import timezone
 
-@api_view(['GET'])
+@login_required
 def mine(request):
-    user = request.user  # Get the logged-in user
-
-    if not user.is_authenticated:
-        return Response({'error': 'User not authenticated'}, status=401)
-
     try:
-        user_profile, created = UserProfile.objects.get_or_create(user=user)
-
+        user_profile = request.user.userprofile
+        # Use local time for today's date
         today = timezone.localtime(timezone.now()).date()
-        last_mine_date = user_profile.last_mine_date
+        
+        # Reset daily counter if it's a new day
+        if user_profile.last_mine_date != today:
+            user_profile.mines_today = 0
+            user_profile.last_mine_date = today
+            user_profile.save()  # Save the reset values
 
-        logger.info(f"Today is {today} and last_mine_date is {last_mine_date}")
-
-        if last_mine_date == today:
-            return Response({'message': 'You have already mined today. Come back tomorrow!'}, status=400)
-
-        # Update last_mine_date
-        user_profile.last_mine_date = today
-        user_profile.save()
-
-        return Response({'message': 'Mining successful!'}, status=200)
-
+        # Check if daily limit is reached
+        if user_profile.plan and user_profile.mines_today >= user_profile.plan.daily_mines:
+            return JsonResponse({'status': 'error', 'message': 'Daily mining limit reached.'})
+        
+        simulate_delay(10)  # Simulate task delay
+        
+        # Increment counter and update balance
+        reward = user_profile.plan.reward_per_mine
+        user_profile.balance += reward
+        user_profile.mines_today += 1
+        user_profile.save()  # Save changes to the database
+        
+        return JsonResponse({
+            'status': 'success',
+            'balance': float(user_profile.balance),
+            'reward': reward,
+            'mines_done': user_profile.mines_today
+        })
     except Exception as e:
-        logger.error(f"An error occurred: {str(e)}")
-        return Response({'error': 'Something went wrong!'}, status=500)
+        logger.error(f"[MINE] Error: {str(e)}")
+        return JsonResponse({'status': 'error', 'message': f'Error during mining: {str(e)}'})
 
 @login_required
 def activate_ads(request):
@@ -357,34 +372,55 @@ def deposit(request):
 @login_required
 def withdrawal(request):
     """
-    Processes a withdrawal request with a minimum amount of $500.
+    Processes a withdrawal request with a minimum amount of $2.
     """
+    user_profile = request.user.userprofile  # Get the user's profile
+
     if request.method == 'POST':
         try:
-            amount_str = request.POST.get("amount")
+            amount_str = request.POST.get("amount", "").strip()  # Ensure no empty values
+            print(f"Raw input amount: '{amount_str}'")  # Debugging output
+
+            if not amount_str:
+                messages.error(request, "Please enter a withdrawal amount.")
+                return redirect('withdrawal')
+
             try:
                 amount = Decimal(amount_str)
-            except (InvalidOperation, TypeError):
-                messages.error(request, "Please enter a valid withdrawal amount.")
+                print(f"Converted Decimal amount: {amount}")  # Debugging output
+            except (InvalidOperation, ValueError):
+                messages.error(request, "Invalid amount entered. Please enter a numeric value.")
                 return redirect('withdrawal')
-            
-            if amount < Decimal('500'):
-                messages.error(request, "Minimum withdrawal is $500.")
+
+            # Ensure the withdrawal amount is at least $2.00
+            if amount < Decimal('2.00'):
+                messages.error(request, f"Minimum withdrawal is $2. You entered: ${amount}")
                 return redirect('withdrawal')
-            
-            user_profile = request.user.userprofile
+
+            # Check if user has enough balance
+            if amount > user_profile.balance:
+                messages.error(request, "Insufficient balance for this withdrawal.")
+                return redirect('withdrawal')
+
+            # Create withdrawal request
             WithdrawalRequest.objects.create(
                 user=user_profile,
                 amount=amount,
                 status='pending'
             )
+
+            # Deduct amount from user balance
+            user_profile.balance -= amount
+            user_profile.save()
+
             messages.success(request, "Withdrawal request submitted successfully. Await admin approval.")
             return redirect('home')
+
         except Exception as e:
             messages.error(request, f"Error during withdrawal request: {str(e)}")
             return redirect('home')
-    
-    return render(request, 'tasks/withdrawal.html')
+
+    return render(request, 'tasks/withdrawal.html', {'balance': user_profile.balance})
 
 def request_withdrawal(request):
     """
@@ -508,41 +544,45 @@ def currency_converter(request):
     })
 
 def income_summary(request):
+    user = request.user  # Get logged-in user
+
+    # Fetch account balance
+    user_profile = UserProfile.objects.get(user=user)
+    total_income = user_profile.balance  # Retrieve from UserProfile
+
+    # Get current time
     today = now().date()
-    one_week_ago = today - timedelta(days=7)
-    one_month_ago = today - timedelta(days=30)
+    week_start = today - timedelta(days=today.weekday())  # Monday of the current week
+    month_start = today.replace(day=1)  # First day of the month
 
-    try:
-        user_profile = UserProfile.objects.get(user=request.user)
-    except UserProfile.DoesNotExist:
-        print("UserProfile does not exist for this user.")
-        return render(request, 'income_summary.html', {
-            "total_earnings": 0,
-            "today_income": 0,
-            "week_income": 0,
-            "month_income": 0,
-        })
+    # Fetch earnings from Income table (fixing the date filtering)
+    today_income = Income.objects.filter(user=user, timestamp__date=today).aggregate(Sum('amount'))['amount__sum'] or 0
+    week_income = Income.objects.filter(user=user, timestamp__date__range=[week_start, today]).aggregate(Sum('amount'))['amount__sum'] or 0
+    month_income = Income.objects.filter(user=user, timestamp__date__range=[month_start, today]).aggregate(Sum('amount'))['amount__sum'] or 0
 
-    total_earnings = Income.objects.filter(user=user_profile).aggregate(total=Sum('amount'))['total'] or 0
-    today_income = Income.objects.filter(user=user_profile, timestamp__date=today).aggregate(total=Sum('amount'))['total'] or 0
-    week_income = Income.objects.filter(user=user_profile, timestamp__date__gte=one_week_ago).aggregate(total=Sum('amount'))['total'] or 0
-    month_income = Income.objects.filter(user=user_profile, timestamp__date__gte=one_month_ago).aggregate(total=Sum('amount'))['total'] or 0
+    # Fetch last 7 days' earnings
+    last_7_days = today - timedelta(days=6)
+    daily_income = (
+        Income.objects.filter(user=user, timestamp__date__range=[last_7_days, today])
+        .values('timestamp__date')
+        .annotate(total=Sum('amount'))
+        .order_by('timestamp__date')
+    )
 
-    # Debugging prints
-    print(f"User: {request.user.username}")
-    print(f"Total Earnings: {total_earnings}")
-    print(f"Today's Income: {today_income}")
-    print(f"This Week's Income: {week_income}")
-    print(f"This Month's Income: {month_income}")
+    # Prepare data for charts
+    labels = [entry['timestamp__date'].strftime('%Y-%m-%d') for entry in daily_income]
+    data = [float(entry['total']) for entry in daily_income]
 
     context = {
-        "total_earnings": total_earnings,
-        "today_income": today_income,
-        "week_income": week_income,
-        "month_income": month_income,
+        'total_income': total_income,  # Fetch balance from UserProfile
+        'today_income': today_income,
+        'week_income': week_income,
+        'month_income': month_income,
+        'labels': labels,
+        'data': data,
     }
-    return render(request, 'income_summary.html', context)
 
+    return render(request, 'tasks/income_summary.html', context)
 @staff_member_required
 def admin_dashboard(request):
     # Get today's date

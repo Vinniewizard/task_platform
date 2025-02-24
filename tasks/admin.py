@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, Task, Transaction, Plan
+from .models import UserProfile, Task, Transaction, Plan, CommissionTransaction
 from .models import Withdrawal, DepositRequest, WithdrawalRequest
 
 @admin.action(description="Approve selected deposits")
@@ -59,7 +59,7 @@ class WithdrawalAdmin(admin.ModelAdmin):
     reject_withdrawals.short_description = "Reject selected withdrawals"
 
 admin.site.register(Withdrawal, WithdrawalAdmin)
-#admin.site.register(CommissionTransaction)
+admin.site.register(CommissionTransaction)
 admin.site.register(Task)
 admin.site.register(Transaction)
 admin.site.register(Plan)

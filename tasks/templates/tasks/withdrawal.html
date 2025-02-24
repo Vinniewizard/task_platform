@@ -1,43 +1,58 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container my-5">
-  <h2>Withdraw Money</h2>
-  <p>Your current balance: <strong>$ {{ user.userprofile.balance }}</strong></p>
-  <form method="POST" id="withdrawalForm">
-      {% csrf_token %}
-      <div class="form-group">
-          <label for="amount">Withdrawal Amount (Minimum $2,@{{user.username}} enjoy instant withdrawal):</label>
-          <input type="number" step="0.01" name="amount" id="amount" class="form-control" required>
-      </div>
-      <div class="form-group">
-          <label for="phone">Phone Number (for withdrawal):</label>
-          <input type="text" name="phone" id="phone" class="form-control" placeholder="Enter your 10-digit phone number" required>
-      </div>
-      <button type="submit" class="btn btn-danger">Submit Withdrawal Request</button>
-  </form>
-  <div id="error-message" class="alert alert-danger mt-3" style="display:none;"></div>
+<div class="container my-4">
+    <h2 class="text-center">Recent Withdrawals</h2>
+    <div id="withdrawals-container" style="max-height: 200px; overflow-y: hidden; border: 1px solid #ccc; padding: 10px;">
+        <p id="loading-text">Loading recent withdrawals...</p>
+    </div>
 </div>
 
 <script>
-  // When the form is submitted, check that the requested amount does not exceed the user's balance.
-  document.getElementById('withdrawalForm').addEventListener('submit', function(e) {
-      // Get user's balance (passed via template)
-      var balance = parseFloat("{{ user.userprofile.balance }}");
-      // Get requested withdrawal amount
-      var amount = parseFloat(document.getElementById('amount').value);
-      
-      // Check if withdrawal amount is greater than balance or less than the minimum
-      if (amount > balance) {
-          e.preventDefault();
-          var errorDiv = document.getElementById('error-message');
-          errorDiv.style.display = 'block';
-          errorDiv.innerText = "Withdrawal amount cannot exceed your current balance of $" + balance.toFixed(2);
-      } else if (amount < 500) {
-          e.preventDefault();
-          var errorDiv = document.getElementById('error-message');
-          errorDiv.style.display = 'block';
-          errorDiv.innerText = "The minimum withdrawal amount is $500.";
-      }
-  });
+    function fetchWithdrawal() {
+        fetch("/tasks/get_random_withdrawal/")
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return;
+
+            let container = document.getElementById("withdrawals-container");
+            let loadingText = document.getElementById("loading-text");
+
+            // Remove "Loading..." text once we get data
+            if (loadingText) loadingText.remove();
+
+            // Create a new withdrawal item
+            let newWithdrawal = document.createElement("p");
+            newWithdrawal.className = "withdrawal-item";
+            newWithdrawal.style.animation = "fadeIn 0.5s"; // Smooth fade-in effect
+            newWithdrawal.innerHTML = `💸 <strong>${data.masked_info}</strong> just withdrew <strong>${data.amount}</strong> via <strong>${data.method}</strong> 🚀`;
+
+            // Add the new withdrawal at the bottom
+            container.appendChild(newWithdrawal);
+
+            // Ensure only the last 4 withdrawals are visible
+            let allWithdrawals = document.querySelectorAll(".withdrawal-item");
+            if (allWithdrawals.length > 4) {
+                allWithdrawals[0].remove(); // Remove the oldest one
+            }
+
+            // Auto-scroll smoothly to show the latest item
+            container.scrollTop = container.scrollHeight;
+        })
+        .catch(error => console.error("Fetch error:", error));
+    }
+
+    // Load 4 withdrawals initially
+    for (let i = 0; i < 4; i++) {
+        setTimeout(fetchWithdrawal, i * 1500); // Staggered delay for initial effect
+    }
+
+    // Fetch a new withdrawal every 5 seconds automatically
+    setInterval(fetchWithdrawal, 5000);
 </script>
-{% endblock %}
+
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
