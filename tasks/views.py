@@ -375,22 +375,29 @@ def perform_task(request):
 @login_required
 def deposit(request):
     """
-    Processes a deposit request by creating a DepositRequest record.
+    Processes a deposit request and ensures the M-Pesa reference number is unique.
     """
     if request.method == 'POST':
-        amount_str = request.POST.get("amount")
         payment_method = request.POST.get("payment_method")
-        reference = request.POST.get("reference", "")
+        phone_number = request.POST.get("phone_number")
+        amount_str = request.POST.get("amount")
+        reference = request.POST.get("reference", "").strip()
+
+        # Validate amount
         try:
             amount = Decimal(amount_str)
-        except (InvalidOperation, TypeError):
-            messages.error(request, "Please enter a valid amount.")
+            if amount <= 0:
+                raise ValueError
+        except (InvalidOperation, ValueError):
+            messages.error(request, "Please enter a valid deposit amount.")
             return redirect('deposit')
-        
-        if amount <= 0:
-            messages.error(request, "Please enter an amount greater than zero.")
+
+        # Check if the reference number is unique
+        if DepositRequest.objects.filter(reference=reference).exists():
+            messages.error(request, "This reference number has already been used. Please use a valid one.")
             return redirect('deposit')
-        
+
+        # Create deposit request
         DepositRequest.objects.create(
             user=request.user.userprofile,
             amount=amount,
@@ -398,11 +405,11 @@ def deposit(request):
             reference=reference,
             status='pending'
         )
-        messages.success(request, "Deposit request submitted successfully. Await admin approval.")
-        return redirect('home')
-    
-    return render(request, 'tasks/deposit.html')
 
+        messages.success(request, "Deposit request submitted successfully! Await admin approval.")
+        return redirect('home')
+
+    return render(request, 'tasks/deposit.html')
 @login_required
 def withdrawal(request):
     """
