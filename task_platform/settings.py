@@ -96,21 +96,18 @@ WSGI_APPLICATION = 'task_platform.wsgi.application'
 
 import os
 
-MPESA_CONFIG = {
-    "CONSUMER_KEY": "kMMCMYqmPfxgQDRQ5YKsNwRZfRsGktEAKETsFbz9stLJRoLr",
-    "CONSUMER_SECRET": "lCiSrLNaXoajzGNpK87cO5XbniNtSHbOKA8A2pw7KcMH7oDiprse5rSAL5dgIvTO",
-    "BUSINESS_SHORTCODE": "174379",  # Ensure it's correct
-    "PASSKEY": "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919",
-    "CALLBACK_URL": "https://vintech-technologies.onrender.com/api/mpesa/callback/",
-}
-
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'vintech',
+        'USER': 'vinnie',
+        'PASSWORD': '11',
+        'HOST': 'localhost',
+        'PORT': '3306',
     }
 }
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
