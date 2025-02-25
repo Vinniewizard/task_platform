@@ -96,20 +96,11 @@ WSGI_APPLICATION = 'task_platform.wsgi.application'
 import os
 import dj_database_url
 
-DATABASE_URL = os.getenv('DATABASE_URL')
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///db.sqlite3")  # Fallback to SQLite if missing
 
-if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.config(default=DATABASE_URL)
-    }
-else:
-    # Default to SQLite for local development
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        }
-    }
+DATABASES = {
+    'default': dj_database_url.config(default=DATABASE_URL)
+}
 
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
