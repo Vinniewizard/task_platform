@@ -23,13 +23,15 @@ SECRET_KEY = 'django-insecure-m(5r$+0yt376vz67ift0*g!z%z!zd@4q$ven7*vc(hc^r-2s9v
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "vintech-technologies.onrender.com",
+    #"vintech-technologies.onrender.com",
+    "web-production-495e.up.railway.app/",
     "127.0.0.1",
     "localhost",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://vintech-technologies.onrender.com",
+    "https://web-production-495e.up.railway.app/",
 ]
 
 INSTALLED_APPS = [
