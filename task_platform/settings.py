@@ -25,14 +25,15 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     #"vintech-technologies.onrender.com",
-    "web-production-495e.up.railway.app/",
+    "web-production-495e.up.railway.app",
+    
     "127.0.0.1",
     "localhost",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://vintech-technologies.onrender.com",
-    "https://web-production-495e.up.railway.app/",
+   # "https://vintech-technologies.onrender.com",
+    "https://web-production-495e.up.railway.app",
 ]
 
 INSTALLED_APPS = [
