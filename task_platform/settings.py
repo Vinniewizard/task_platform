@@ -95,11 +95,8 @@ WSGI_APPLICATION = 'task_platform.wsgi.application'
 
 # settings.py
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv("DATABASE_URL")
-    )
+    'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
 }
-
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_COOKIE_AGE = 1209600  # 2 weeks
