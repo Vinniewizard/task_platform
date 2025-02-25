@@ -96,13 +96,20 @@ WSGI_APPLICATION = 'task_platform.wsgi.application'
 
 import os
 
-# Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'task_platform',
+        'USER': 'vinnie',
+        'PASSWORD': '11',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
+
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+SESSION_COOKIE_AGE = 120960008768967898765567  # 2 weeks
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 
 # Password validation
