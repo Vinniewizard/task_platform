@@ -23,13 +23,13 @@ SECRET_KEY = 'django-insecure-m(5r$+0yt376vz67ift0*g!z%z!zd@4q$ven7*vc(hc^r-2s9v
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
+ALLOWED_HOSTS = ["web-production-b69e.up.railway.app", "127.0.0.1", "localhost"]
 
 
-CSRF_TRUSTED_ORIGINS = [
+#CSRF_TRUSTED_ORIGINS = [
    # "https://vintech-technologies.onrender.com",
-    "https://web-production-495e.up.railway.app",
-]
+   # "https://web-production-495e.up.railway.app",
+#]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
