@@ -95,16 +95,10 @@ WSGI_APPLICATION = 'task_platform.wsgi.application'
 
 # settings.py
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'task_platform',
-        'USER': 'vinnie',
-        'PASSWORD': '11',
-        'HOST': 'localhost',  # Or your database host
-        'PORT': '5432',       # Default PostgreSQL port
-    }
+    'default': dj_database_url.config(
+        default=os.getenv("DATABASE_URL")
+    )
 }
-
 
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
