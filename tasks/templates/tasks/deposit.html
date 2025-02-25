@@ -57,6 +57,19 @@
             font-size: 14px;
             margin-top: 10px;
         }
+        .copy-btn {
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 5px;
+            margin-left: 5px;
+        }
+        .copy-btn:hover {
+            background: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -77,13 +90,12 @@
             
             <div class="form-group">
                 <label>Deposit Method:</label>
-               <select id="deposit_method" name="payment_method" required>
-                   <option value="">Select Method</option>
+                <select id="deposit_method" name="payment_method" required>
+                    <option value="">Select Method</option>
                     <option value="mpesa">M-Pesa</option>
-                   <option value="airtel">Airtel Money</option>
-                   <option value="binance">Binance (BTC, ETH, USDT)</option>
-              </select>
-
+                    <option value="airtel">Airtel Money</option>
+                    <option value="binance">Binance (BTC, ETH, USDT)</option>
+                </select>
             </div>
 
             <div class="form-group">
@@ -100,10 +112,12 @@
                 <label>Transaction Reference:</label>
                 <input type="text" name="reference" placeholder="Enter Transaction Reference" required>
             </div>
+
+            <!-- Binance Transaction Hash (Hidden by Default) -->
             <div class="form-group" id="binance_txid" style="display: none;">
                 <label>Transaction Hash (TxID):</label>
                 <input type="text" name="binance_txid" placeholder="Enter Binance TxID">
-            </div>       
+            </div>
 
             <button type="submit">Submit for Approval</button>
         </form>
@@ -128,42 +142,38 @@
         </div>
 
         <div id="instructions_binance" class="instructions">
-    <h3>📌 How to Pay via Binance (BTC, ETH, USDT)</h3>
-    <p>1️⃣ Open your <strong>Binance</strong> app or log in to your Binance account.</p>
-    <p>2️⃣ Navigate to <strong>Wallet</strong> → <strong>Funding</strong> → <strong>Withdraw</strong>.</p>
-    <p>3️⃣ Select the cryptocurrency you want to send: <strong>Bitcoin (BTC), Ethereum (ETH), or USDT (Tether)</strong>.</p>
-    <p>4️⃣ Choose <strong>Send via Crypto Network</strong>.</p>
-    <p>5️⃣ Enter the correct wallet address based on the coin you’re sending:</p>
-    
-    <ul>
-        <li><strong>BTC Address:</strong> <code>1A2b3C4d5E6f7G8h9iJ0kLmNoPQRsTUVWX</code></li>
-        <li><strong>ETH Address:</strong> <code>0xAbC12345dEf67890GhiJklMnOpqRstUVwxYZ</code></li>
-        <li><strong>USDT (TRC20) Address:</strong> <code>TAbCdEfGhIjKlMnOpQrStUvWxYz01234567</code></li>
-    </ul>
+            <h3>📌 How to Pay via Binance (BTC, ETH, USDT)</h3>
+            <p>1️⃣ Open your <strong>Binance</strong> app or log in to your Binance account.</p>
+            <p>2️⃣ Navigate to <strong>Wallet</strong> → <strong>Funding</strong> → <strong>Withdraw</strong>.</p>
+            <p>3️⃣ Select the cryptocurrency you want to send: <strong>Bitcoin (BTC), Ethereum (ETH), or USDT (Tether)</strong>.</p>
+            <p>4️⃣ Choose <strong>Send via Email</strong>.</p>
+            <p>5️⃣ Copy and paste this email address:</p>
+            
+            <div>
+                <strong>📩 Binance Email:</strong> 
+                <input type="text" value="vincentkipkoech937@gmail.com" readonly>
+                <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+            </div>
 
-    <p>6️⃣ Confirm the transaction and enter the **Transaction Hash (TxID)** below.</p>
-</div>
-
+            <p>6️⃣ Enter the amount and confirm the transaction.</p>
+            <p>7️⃣ After the transaction is complete, enter the **Transaction Hash (TxID)** in the form above.</p>
+        </div>
     </div>
 
     <script>
-    document.getElementById("deposit_method").addEventListener("change", function() {
-        document.getElementById("instructions_mpesa").style.display = (this.value === "mpesa") ? "block" : "none";
-        document.getElementById("instructions_airtel").style.display = (this.value === "airtel") ? "block" : "none";
-        document.getElementById("instructions_binance").style.display = (this.value === "binance") ? "block" : "none";
-    });
-</script>
-<script>
-    document.getElementById("deposit_method").addEventListener("change", function() {
-        var binanceTxID = document.getElementById("binance_txid");
-        if (this.value === "binance") {
-            binanceTxID.style.display = "block";
-        } else {
-            binanceTxID.style.display = "none";
+        function copyToClipboard(button) {
+            var input = button.previousElementSibling;
+            input.select();
+            document.execCommand("copy");
+            alert("Copied: " + input.value);
         }
-    });
-</script>
 
-
+        document.getElementById("deposit_method").addEventListener("change", function() {
+            document.getElementById("instructions_mpesa").style.display = (this.value === "mpesa") ? "block" : "none";
+            document.getElementById("instructions_airtel").style.display = (this.value === "airtel") ? "block" : "none";
+            document.getElementById("instructions_binance").style.display = (this.value === "binance") ? "block" : "none";
+            document.getElementById("binance_txid").style.display = (this.value === "binance") ? "block" : "none";
+        });
+    </script>
 </body>
 </html>
