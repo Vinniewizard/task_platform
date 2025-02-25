@@ -92,20 +92,13 @@ WSGI_APPLICATION = 'task_platform.wsgi.application'
 
 # settings.py
 
-# settings.py
-
-import os
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'task_platform',
-        'USER': 'vinnie',
-        'PASSWORD': '11',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / "db.sqlite3",
     }
 }
+
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_COOKIE_AGE = 120960008768967898765567  # 2 weeks
