@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -93,17 +94,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'task_platform.wsgi.application'
 
 # settings.py
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / "db.sqlite3",
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'task_platform',
+        'USER': 'vinnie',
+        'PASSWORD': '11',
+        'HOST': 'localhost',  # Or your database host
+        'PORT': '5432',       # Default PostgreSQL port
     }
 }
 
 
+
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
-SESSION_COOKIE_AGE = 120960008768967898765567  # 2 weeks
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 
