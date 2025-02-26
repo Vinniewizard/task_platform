@@ -96,10 +96,8 @@ WSGI_APPLICATION = 'task_platform.wsgi.application'
 import os
 import dj_database_url
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///db.sqlite3")  # Fallback to SQLite if missing
-
 DATABASES = {
-    'default': dj_database_url.config(default=DATABASE_URL)
+    'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
 }
 
 
