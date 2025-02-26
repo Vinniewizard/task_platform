@@ -107,10 +107,11 @@ DATABASES = {
         'NAME': os.getenv('MYSQLDATABASE', 'railway'),
         'USER': os.getenv('MYSQLUSER', 'root'),
         'PASSWORD': os.getenv('MYSQLPASSWORD', ''),
-        'HOST': os.getenv('MYSQLHOST', '127.0.0.1'),
+        'HOST': os.getenv('MYSQLHOST', 'mysql.railway.internal'),  # Use Railway MySQL host
         'PORT': os.getenv('MYSQLPORT', '3306'),
         'OPTIONS': {
-            'ssl': {'ssl-mode': 'DISABLED'}  # Disable SSL if needed
+            'charset': 'utf8mb4',
+            'ssl': {'ssl-mode': 'DISABLED'}  # Disable SSL if necessary
         }
     }
 }
