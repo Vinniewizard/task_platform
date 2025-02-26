@@ -29,10 +29,10 @@ ALLOWED_HOSTS = [
     "localhost",
 ]
 
-#CSRF_TRUSTED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS = [
    # "https://vintech-technologies.onrender.com",
-   # "https://web-production-495e.up.railway.app",
-#]
+    "https://web-production-495e.up.railway.app",
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -59,6 +59,7 @@ CELERY_TASK_SERIALIZER = 'json'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Add this line
     'whitenoise.middleware.WhiteNoiseMiddleware',  # For static file serving in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -67,7 +68,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 ROOT_URLCONF = 'task_platform.urls'
 
 LOGIN_URL = '/tasks/login/'
