@@ -1,4 +1,4 @@
-# Ignore database
+# Ignore database files
 db.sqlite3
 
 # Ignore Django migrations (optional)
