@@ -24,14 +24,14 @@ SECRET_KEY = 'django-insecure-m(5r$+0yt376vz67ift0*g!z%z!zd@4q$ven7*vc(hc^r-2s9v
 DEBUG = False
 
 ALLOWED_HOSTS = [
-    "web-production-b69e.up.railway.app",
+    "vintech-technologies.up.railway.app",
     "127.0.0.1",
     "localhost",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://web-production-b69e.up.railway.app",
-    "http://web-production-b69e.up.railway.app",  # Add both HTTPS and HTTP just in case
+    "https://vintech-technologies.up.railway.app",
+    "https://vintech-technologies.up.railway.app",  # Add both HTTPS and HTTP just in case
 ]
 
 
