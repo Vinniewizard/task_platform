@@ -104,27 +104,17 @@ import os
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'task_platform_db',  # Local MySQL database name
-        'USER': 'vinnie',  # Local MySQL user
-        'PASSWORD': '11',  # Local MySQL password
-        'HOST': '127.0.0.1',  # Localhost
-        'PORT': '3306',  # Default MySQL port
+        'NAME': os.getenv('MYSQLDATABASE', 'railway'),
+        'USER': os.getenv('MYSQLUSER', 'root'),
+        'PASSWORD': os.getenv('MYSQLPASSWORD', ''),
+        'HOST': os.getenv('MYSQLHOST', '127.0.0.1'),
+        'PORT': os.getenv('MYSQLPORT', '3306'),
         'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-    },
-    'railway': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'railway',
-        'USER': 'root',
-        'PASSWORD': 'naVGayhUkfshQKProdpFojMyitSgAZSD',
-        'HOST': 'switchyard.proxy.rlwy.net',  # Public Railway Host
-        'PORT': '43932',  # Public Railway Port
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+            'ssl': {'ssl-mode': 'DISABLED'}  # Disable SSL if needed
+        }
     }
 }
+
 
 # Switch to Railway database if environment variable is set
 if os.getenv('USE_RAILWAY_DB', 'False') == 'True':
