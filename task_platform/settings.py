@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-m(5r$+0yt376vz67ift0*g!z%z!zd@4q$ven7*vc(hc^r-2s9v'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     "web-production-b69e.up.railway.app",
@@ -30,9 +30,10 @@ ALLOWED_HOSTS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-   # "https://vintech-technologies.onrender.com",
-    "https://web-production-495e.up.railway.app",
+    "https://web-production-b69e.up.railway.app",
+    "http://web-production-b69e.up.railway.app",  # Add both HTTPS and HTTP just in case
 ]
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
