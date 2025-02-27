@@ -197,14 +197,33 @@ class WithdrawalRequest(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="withdrawal_requests")
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    withdrawal_method = models.CharField(max_length=20, choices=WITHDRAWAL_METHODS, default='mpesa')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        """
+        Handles balance deduction and refund logic.
+        - Deduct balance when a new request is made.
+        - Refund balance if a rejected withdrawal is changed to approved.
+        """
+        if self.pk:  # Check if this is an update operation
+            original = WithdrawalRequest.objects.get(pk=self.pk)
+
+            if original.status == 'pending' and self.status == 'approved':
+                # Withdrawal approved → Balance remains deducted (no changes needed)
+                pass
+            elif original.status == 'pending' and self.status == 'rejected':
+                # Withdrawal rejected → Refund the user
+                self.user.balance += self.amount
+                self.user.save()
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.user.username} - ${self.amount} ({self.status})"
 
     class Meta:
         verbose_name_plural = "Withdrawal Requests"
-
 
 class Withdrawal(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="withdrawals")
@@ -225,12 +244,30 @@ class DepositRequest(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
     reference = models.CharField(max_length=100, blank=True, null=True)
-    status = models.CharField(max_length=20, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    def save(self, *args, **kwargs):
+        """
+        Automatically update user balance when the deposit is approved.
+        Prevents multiple credits if status changes again.
+        """
+        if self.pk:  # Check if this is an update operation
+            original = DepositRequest.objects.get(pk=self.pk)
+
+            if original.status != 'approved' and self.status == 'approved':
+                # Deposit was just approved → Add money to user balance
+                self.user.balance += self.amount
+                self.user.save()
+            elif original.status == 'approved' and self.status != 'approved':
+                # Deposit was previously approved but now changed → Revert balance
+                self.user.balance -= self.amount
+                self.user.save()
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.user.username} - {self.amount} via {self.get_payment_method_display()}"
-
 
 class Deposit(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="deposits")
@@ -238,7 +275,8 @@ class Deposit(models.Model):
     mpesa_pin_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
-
+    def __str__(self):
+        return f"{self.user.user.username} - {self.amount} (Verified: {self.mpesa_pin_verified})"
 # ---------------------------
 # EARNINGS
 # ---------------------------
