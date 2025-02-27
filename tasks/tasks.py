@@ -1,10 +1,6 @@
-from datetime import datetime
-from tasks.models import Task  # Import your Task model
+from celery import shared_task
+from tasks.models import UserProfile
 
-def reset_tasks():
-    """
-    Resets all user tasks daily at midnight.
-    """
-    Task.objects.all().update(status="pending")  # Reset status
-    print(f"Tasks reset at {timezone.now()}")  # Log when it runs
-
+@shared_task
+def reset_daily_tasks():
+    UserProfile.objects.update(tasks_completed_today=False)

@@ -49,6 +49,7 @@ class UserProfile(models.Model):
     otp_verified = models.BooleanField(default=False)
     referral_count = models.IntegerField(default=0)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    tasks_completed_today = models.IntegerField(default=0)  # Track daily completed tasks
 
     # ✅ Referral System Fields
     referral_code = models.CharField(max_length=10, unique=True, null=True, blank=True)

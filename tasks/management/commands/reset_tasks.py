@@ -1,14 +1,12 @@
 from django.core.management.base import BaseCommand
 from django.utils.timezone import now
-from tasks.models import Task
+from tasks.models import UserProfile  # Import UserProfile if tasks are linked to users
 
 class Command(BaseCommand):
-    help = "Reset tasks status to pending"
+    help = "Reset daily completed tasks for all users"
 
     def handle(self, *args, **options):
-        today = now().date()  # <-- Make sure this line is correctly indented!
-        
-        affected_tasks = Task.objects.filter(title__in=["Download", "Watch Ads"]).update(status="pending")
+        # Reset daily task count for all users
+        affected_users = UserProfile.objects.update(tasks_completed_today=0)
 
-        
-        self.stdout.write(self.style.SUCCESS(f"Successfully reset {affected_tasks} tasks to pending."))
+        self.stdout.write(self.style.SUCCESS(f"Successfully reset daily tasks for {affected_users} users."))

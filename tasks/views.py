@@ -51,7 +51,9 @@ from .models import Withdrawal  # Ensure correct model import
 from django.utils.timezone import now, timedelta
 from django.db import transaction
 import uuid
-
+from django.http import JsonResponse
+from django.utils.timezone import localtime
+from tasks.models import UserProfile
 
 @shared_task
 def reset_daily_counters():
@@ -684,3 +686,15 @@ def reset_tasks_view(request):
             return JsonResponse({"error": str(e)}, status=500)
     
     return JsonResponse({"error": "Invalid request method"}, status=400)
+
+def complete_task(request):
+    user_profile = UserProfile.objects.get(user=request.user)
+
+    if user_profile.tasks_completed_today:
+        return JsonResponse({"message": "You have already completed today's tasks. Wait until midnight or upgrade your plan."}, status=403)
+
+    # Mark task as completed
+    user_profile.tasks_completed_today = True
+    user_profile.save()
+
+    return JsonResponse({"message": "Task completed successfully!"}, status=200)

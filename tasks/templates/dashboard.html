@@ -7,6 +7,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+
+    {% if user.userprofile.tasks_completed_today %}
+    <p style="color: red;">You have completed today's tasks. Come back after midnight or upgrade your plan.</p>
+{% else %}
+    <p style="color: green;">You can complete your daily tasks now!</p>
+{% endif %}
+
     <canvas id="incomeChart"></canvas>
 
     <script>
