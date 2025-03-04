@@ -54,6 +54,15 @@ import uuid
 from django.http import JsonResponse
 from django.utils.timezone import localtime
 from tasks.models import UserProfile
+from rest_framework import viewsets, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import UserProfile, Plan 
+from .serializers import UserProfileSerializer
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from django.urls import reverse  # Import reverse to generate URLs
+from django.utils.html import format_html
+
 
 @shared_task
 def reset_daily_counters():
@@ -150,43 +159,56 @@ def register(request):
     if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():
+            phone_number = form.cleaned_data["phone_number"]
+
+            # ✅ **Ensure phone number is unique**
+            if User.objects.filter(username=phone_number).exists():
+                messages.error(request, "❌ Phone number already registered.")
+                return render(request, "tasks/register.html", {"form": form})
+
             try:
-                with transaction.atomic():  # Ensures database integrity
+                with transaction.atomic():  # ✅ **Ensures database integrity**
+                    # ✅ **Create new user**
                     user = form.save(commit=False)
-                    user.username = form.cleaned_data["phone_number"]
+                    user.username = phone_number  # ✅ **Set phone number as username**
                     user.save()
 
-                    # Create or update UserProfile
+                    # ✅ **Create user profile**
                     user_profile, created = UserProfile.objects.get_or_create(user=user)
-                    user_profile.phone_number = form.cleaned_data["phone_number"]
-                    
-                    # Handle Referral Code
+                    user_profile.phone_number = phone_number
+                    user_profile.save()
+
+                    # ✅ **Handle Referral Code**
                     referral_code = request.POST.get("referral_code")
                     if referral_code:
                         try:
                             referrer = UserProfile.objects.get(referral_code=referral_code)
-                            user_profile.referred_by = referrer
+                            user_profile.referred_by = referrer  # ✅ **Link referrer**
                             user_profile.save()
 
-                            # ✅ Add commission based on referrer's plan
+                            # ✅ **Increase referrer’s referral count**
+                            referrer.referral_count += 1
+                            referrer.save()
+
+                            # ✅ **Reward referrer if they have an active plan**
                             if referrer.plan:
-                                referrer.balance += referrer.plan.invitation_commission
+                                referral_bonus = referrer.plan.invitation_commission or 0
+                                referrer.balance += referral_bonus
                                 referrer.save()
-                                messages.success(request, f"You have earned ${referrer.plan.invitation_commission} for inviting {user.username}!")
+
+                                messages.success(request, f"🎉 You have earned ${referral_bonus} for inviting {phone_number}!")
                             else:
-                                messages.warning(request, "Referrer does not have an active plan. No commission awarded.")
+                                messages.warning(request, "⚠️ Referrer does not have an active plan. No commission awarded.")
 
                         except UserProfile.DoesNotExist:
-                            messages.error(request, "Invalid referral code.")
+                            messages.error(request, "⚠️ Invalid referral code. No commission awarded.")
 
-                    user_profile.save()
-
-                    # Send OTP for verification
-                    otp = send_otp(form.cleaned_data["phone_number"])
+                    # ✅ **Send OTP for verification**
+                    otp = send_otp(phone_number)
                     request.session["otp"] = otp
-                    request.session["phone_number"] = form.cleaned_data["phone_number"]
+                    request.session["phone_number"] = phone_number
 
-                    messages.success(request, "Registration successful. OTP sent.")
+                    messages.success(request, "✅ Registration successful. OTP sent.")
                     return redirect("verify_otp")
 
             except Exception as e:
@@ -199,6 +221,7 @@ def register(request):
         form = RegistrationForm()
 
     return render(request, "tasks/register.html", {"form": form})
+
 def login_view(request):
     """Handles user login."""
     if request.method == 'POST':
@@ -604,38 +627,40 @@ def currency_converter(request):
     return render(request, 'tasks/currency_converter.html', context)
 
 def income_summary(request):
+    """Displays user's earnings, referral commission, and income trends."""
+    
     user_profile = UserProfile.objects.get(user=request.user)
-    user_plan = user_profile.plan  # Get the user's plan
+    user_plan = user_profile.plan  # Get user's plan, can be None
 
-    # Total balance
-    total_income = user_profile.balance
-
-    # Get current date
+    # Get current date and calculate week/month start
     today = now().date()
     week_start = today - timedelta(days=today.weekday())  # Start of the week
     month_start = today.replace(day=1)  # Start of the month
 
-    # Calculate income
+    # **Ensure earnings update correctly**
     today_income = Income.objects.filter(user=request.user, timestamp__date=today).aggregate(total=Sum("amount"))["total"] or 0
     week_income = Income.objects.filter(user=request.user, timestamp__gte=week_start).aggregate(total=Sum("amount"))["total"] or 0
     month_income = Income.objects.filter(user=request.user, timestamp__gte=month_start).aggregate(total=Sum("amount"))["total"] or 0
 
-    # Referral commission from the user's plan
-    referral_commission = user_plan.invitation_commission if user_plan else 0
+    # **Ensure total balance is updated correctly**
+    total_income = user_profile.balance or 0
 
-    # Generate invite link
+    # **Fix referral commission retrieval (avoid errors if no plan)**
+    referral_commission = getattr(user_plan, "invitation_commission", 0)
+
+    # **Generate Invite Link**
     base_url = request.build_absolute_uri('/')
     invite_url = f"{base_url}tasks/register/?referral_code={user_profile.referral_code}"
 
-    # Fetch earnings data for the last 7 days
+    # **Fetch earnings data for the last 7 days (Graph)**
     last_7_days = [today - timedelta(days=i) for i in range(6, -1, -1)]
     labels = [day.strftime("%b %d") for day in last_7_days]
-    earnings_data = []
-    
-    for day in last_7_days:
-        total_earning = Income.objects.filter(user=request.user, timestamp__date=day).aggregate(total=Sum("amount"))["total"] or 0
-        earnings_data.append(total_earning)
+    earnings_data = [
+        Income.objects.filter(user=request.user, timestamp__date=day).aggregate(total=Sum("amount"))["total"] or 0
+        for day in last_7_days
+    ]
 
+    # **Prepare Context Data**
     context = {
         "total_income": total_income,
         "today_income": today_income,
@@ -644,9 +669,9 @@ def income_summary(request):
         "invite_url": invite_url,
         "referral_code": user_profile.referral_code,
         "referral_commission": referral_commission,
-        "user_plan": user_plan,  # Pass the plan details to the template
-        "labels": labels,  # Pass labels for graph
-        "earnings_data": earnings_data,  # Pass earnings data for graph
+        "user_plan": user_plan,  # Pass plan details
+        "labels": labels,  # Graph labels
+        "earnings_data": earnings_data,  # Graph earnings data
     }
 
     return render(request, "tasks/income_summary.html", context)
@@ -688,13 +713,81 @@ def reset_tasks_view(request):
     return JsonResponse({"error": "Invalid request method"}, status=400)
 
 def complete_task(request):
+    """Allows users to complete tasks based on their plan and update earnings correctly"""
+    
     user_profile = UserProfile.objects.get(user=request.user)
 
-    if user_profile.tasks_completed_today:
-        return JsonResponse({"message": "You have already completed today's tasks. Wait until midnight or upgrade your plan."}, status=403)
+    # Check if user has a valid plan
+    if not user_profile.plan_name or not user_profile.plan_expiry or user_profile.plan_expiry < now().date():
+        return JsonResponse({"message": "Your plan has expired. Please renew to continue earning."}, status=403)
 
-    # Mark task as completed
-    user_profile.tasks_completed_today = True
+    # Get the user's plan details
+    plan_details = {
+        "PLAN 50": {"daily_tasks": 4, "reward_per_task": 0.75},
+        "PLAN 100": {"daily_tasks": 6, "reward_per_task": 1.00},
+        # Add other plans here
+    }
+
+    plan = plan_details.get(user_profile.plan_name, None)
+
+    if not plan:
+        return JsonResponse({"message": "Invalid plan. Please contact support."}, status=403)
+
+    # Check if the user has already completed the maximum tasks for today
+    if user_profile.tasks_completed_today >= plan["daily_tasks"]:
+        return JsonResponse({"message": "You have already completed today's tasks. Upgrade your plan or wait until midnight."}, status=403)
+
+    # Update earnings
+    reward = plan["reward_per_task"]
+    user_profile.balance += reward
+    user_profile.todays_income += reward
+    user_profile.weekly_income += reward
+    user_profile.monthly_income += reward
+
+    # Increment tasks completed
+    user_profile.tasks_completed_today += 1
     user_profile.save()
 
-    return JsonResponse({"message": "Task completed successfully!"}, status=200)
+    return JsonResponse({"message": f"Task completed successfully! You earned {reward} KES.", "balance": user_profile.balance}, status=200)
+def update_user_earnings(user, reward):
+    """Update balance and income details when a user completes a task"""
+    
+    # Get user profile
+    profile, created = UserProfile.objects.get_or_create(user=user)
+    
+    # Get current date
+    today = now().date()
+    week_start = today - timedelta(days=today.weekday())  # Start of the week
+    month_start = today.replace(day=1)  # Start of the month
+
+    # Update earnings
+    profile.balance += reward
+    profile.todays_income += reward  # Update today's earnings
+    profile.weekly_income += reward  # Update weekly earnings
+    profile.monthly_income += reward  # Update monthly earnings
+    profile.save()
+    
+
+class UserProfileViewSet(viewsets.ModelViewSet):
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['plan']  # Enables filtering by PLAN
+
+
+def reset_user_profile(request, pk=None, plan_id=None):
+    if pk:
+        # Reset a single user's profile
+        user_profile = get_object_or_404(UserProfile, id=pk)
+        user_profile.mines_today = 0
+        user_profile.ads_watched_today = 0
+        user_profile.save()
+        messages.success(request, f"✅ {user_profile.user.username}'s profile has been reset.")
+
+    elif plan_id:
+        # Reset all users under a specific plan
+        user_profiles = UserProfile.objects.filter(plan_id=plan_id)
+        updated_count = user_profiles.update(mines_today=0, ads_watched_today=0)
+        messages.success(request, f"✅ Reset profile for {updated_count} users under Plan {plan_id}.")
+
+    return redirect(reverse('admin:tasks_userprofile_changelist'))

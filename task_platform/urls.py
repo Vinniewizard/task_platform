@@ -23,5 +23,6 @@ urlpatterns = [
     path('', views.home, name='home'),  # Add this line
     path('tasks/', include('tasks.urls')),  # Your existing task URLs
     path("api/mpesa/", include("mpesa.urls")),
+   
     
 ]

@@ -8,6 +8,9 @@ from .views import (
     income_summary, get_random_withdrawal,
 )
 from .views import reset_tasks_view  # Ensure this import is correc
+from . import views
+
+
 
 urlpatterns = [
     path('home/', home, name='home'),
@@ -31,6 +34,10 @@ urlpatterns = [
     path('contact_support/', contact_support, name='contact_support'),
     path('logout/', logout_view, name='logout'),
     path("reset_tasks/", reset_tasks_view, name="reset_tasks"),
+    path('tasks/reset-user-profile/<int:pk>/', views.reset_user_profile, name='reset_user_profile'),
+    path('tasks/reset-user-profile/plan/<int:plan_id>/', views.reset_user_profile, name='reset_user_profile_plan'),
+
+
     path('get_random_withdrawal/', get_random_withdrawal, name='get_random_withdrawal'),
     # Password reset paths:
     path('password-reset/', auth_views.PasswordResetView.as_view(template_name='password_reset.html'), name='password_reset'),

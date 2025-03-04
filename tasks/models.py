@@ -41,6 +41,11 @@ PAYMENT_METHOD_CHOICES = [
 ]
 
 # ---------------------------
+import uuid
+from django.conf import settings
+from django.db import models
+from django.utils import timezone
+
 class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     phone_number = models.CharField(max_length=15, unique=True, null=True, blank=True)
@@ -52,15 +57,17 @@ class UserProfile(models.Model):
     tasks_completed_today = models.IntegerField(default=0)  # Track daily completed tasks
 
     # ✅ Referral System Fields
-    referral_code = models.CharField(max_length=10, unique=True, null=True, blank=True)
-    referred_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="referrals")
+    referral_code = models.CharField(max_length=10, unique=True, blank=True, null=True)
+    referred_by = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL, related_name="referred_users"
+    )  # Tracks who referred the user
 
     wallet_address = models.CharField(max_length=255, null=True, blank=True)
 
     # ✅ Plan Subscription
     plan = models.ForeignKey("Plan", on_delete=models.SET_NULL, null=True, blank=True)
 
-    # ✅ Daily task counters
+    # ✅ Daily Task Counters
     mines_today = models.IntegerField(default=0)
     last_mine_date = models.DateField(null=True, blank=True)
     ads_activated = models.BooleanField(default=False)
@@ -70,8 +77,8 @@ class UserProfile(models.Model):
 
     # ✅ Earnings & Commissions
     total_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
-    # ✅ New fields for income tracking
+
+    # ✅ New Fields for Income Tracking
     daily_income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     weekly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     monthly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -81,9 +88,9 @@ class UserProfile(models.Model):
         verbose_name_plural = "User Profiles"
 
     def save(self, *args, **kwargs):
-        # Generate referral code if not exists
+        """ Generate a referral code if the user doesn't have one """
         if not self.referral_code:
-            self.referral_code = str(uuid.uuid4().hex[:8])  # Generate unique referral code
+            self.referral_code = str(uuid.uuid4().hex[:8]).upper()  # Generate unique referral code
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -111,6 +118,7 @@ class UserProfile(models.Model):
         self.total_commission += reward
 
         self.save()  # Save the updated values
+
 
 class Plan(models.Model):
     name = models.CharField(max_length=100)
