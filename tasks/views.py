@@ -520,7 +520,7 @@ def request_withdrawal(request):
 @login_required
 def choose_plan(request):
     """
-    Renders a page for the user to choose and activate/upgrade a plan.
+    Allows users to choose and activate/upgrade a plan.
     """
     if request.method == "POST":
         plan_id = request.POST.get("plan_id")
@@ -532,44 +532,45 @@ def choose_plan(request):
 
         user_profile = request.user.userprofile
 
-        # Check if the user is already on the selected plan
+        # ✅ Check if user is already on the selected plan
         if user_profile.plan and user_profile.plan.id == plan.id:
             messages.error(request, "You are already on this plan. Please select a different plan to upgrade.")
             return redirect("choose_plan")
 
-        # Check if the user has enough balance
+        # ✅ Check if user has enough balance
         if user_profile.balance < plan.activation_fee:
             messages.error(request, "Insufficient balance to activate this plan.")
             return redirect("choose_plan")
 
-        # Deduct activation fee
+        # ✅ Deduct activation fee
         user_profile.balance -= plan.activation_fee
 
-        # Reset daily limits if upgrading
-        if user_profile.plan:
-            user_profile.mines_today = 0
-            user_profile.last_mine_date = None
-            user_profile.ads_watched_today = 0
-            user_profile.last_ad_date = None
+        # ✅ Reset daily limits when upgrading
+        user_profile.mines_today = 0
+        user_profile.last_mine_date = None
+        user_profile.ads_watched_today = 0
+        user_profile.last_ad_date = None
+        user_profile.tasks_completed_today = 0
 
-        # Assign new plan and update activation date
+        # ✅ Assign new plan and update activation date
         user_profile.plan = plan
-        user_profile.plan_activation_date = datetime.date.today()
-        user_profile.save()
+        user_profile.plan_activation_date = timezone.now().date()
 
-        # Handle referral system
+        # ✅ Handle Referral System
         referral_code = request.session.get("referral_code", None)
         if referral_code:
             try:
                 inviter = UserProfile.objects.get(referral_code=referral_code)
 
-                # Award commission if the new plan is not "Trainee"
+                # ✅ Award commission if the plan is not "Trainee"
                 if plan.name.strip().lower() != "trainee":
                     inviter.balance += plan.invitation_commission
+                    inviter.referral_count += 1  # ✅ Update total number of referrals
+                    inviter.total_commission += plan.invitation_commission  # ✅ Track earnings
                     inviter.save()
                     logger.info(f"Commission of {plan.invitation_commission} awarded to inviter {inviter.user.username}")
 
-                    # If the inviter is restricted from withdrawals, lift the restriction
+                    # ✅ If inviter is restricted from withdrawals, lift the restriction
                     if inviter.referral_restricted and plan.id >= 4:
                         inviter.referral_restricted = False
                         inviter.save()
@@ -582,8 +583,11 @@ def choose_plan(request):
             except UserProfile.DoesNotExist:
                 logger.warning("Referral code invalid; no inviter found.")
             
-            # Remove the referral code after use
+            # ✅ Remove referral code from session after use
             request.session.pop("referral_code", None)
+
+        # ✅ Save User Profile Updates
+        user_profile.save()
 
         messages.success(request, "Plan activated/upgraded successfully! Your daily limits have been reset.")
         return redirect("home")
@@ -592,7 +596,6 @@ def choose_plan(request):
         plans = Plan.objects.all()
         user_balance = request.user.userprofile.balance
         return render(request, "tasks/choose_plan.html", {"plans": plans, "balance": user_balance})
-    
 @login_required
 def invite(request):
     """Generates an invitation link for the user."""
@@ -739,43 +742,50 @@ def reset_tasks_view(request):
     
     return JsonResponse({"error": "Invalid request method"}, status=400)
 
+@login_required
 def complete_task(request):
     """Allows users to complete tasks based on their plan and update earnings correctly"""
     
     user_profile = UserProfile.objects.get(user=request.user)
 
-    # Check if user has a valid plan
-    if not user_profile.plan_name or not user_profile.plan_expiry or user_profile.plan_expiry < now().date():
-        return JsonResponse({"message": "Your plan has expired. Please renew to continue earning."}, status=403)
+    # ✅ Check if user has a valid plan
+    if not user_profile.plan or not user_profile.plan_activation_date:
+        return JsonResponse({"message": "You do not have an active plan. Please subscribe to a plan."}, status=403)
 
-    # Get the user's plan details
+    # ✅ Plan Details & Rewards (Modify these as needed)
     plan_details = {
         "PLAN 50": {"daily_tasks": 4, "reward_per_task": 0.75},
         "PLAN 100": {"daily_tasks": 6, "reward_per_task": 1.00},
-        # Add other plans here
+        # Add more plans here...
     }
 
-    plan = plan_details.get(user_profile.plan_name, None)
+    plan_name = user_profile.plan.name
+    plan = plan_details.get(plan_name, None)
 
     if not plan:
         return JsonResponse({"message": "Invalid plan. Please contact support."}, status=403)
 
-    # Check if the user has already completed the maximum tasks for today
+    # ✅ Check if the user has already completed max daily tasks
     if user_profile.tasks_completed_today >= plan["daily_tasks"]:
         return JsonResponse({"message": "You have already completed today's tasks. Upgrade your plan or wait until midnight."}, status=403)
 
-    # Update earnings
+    # ✅ Update Earnings
     reward = plan["reward_per_task"]
     user_profile.balance += reward
-    user_profile.todays_income += reward
-    user_profile.weekly_income += reward
-    user_profile.monthly_income += reward
+    user_profile.update_income(reward)  # Updates daily, weekly, monthly income & total commission
+    user_profile.tasks_completed_today += 1  # Increment completed tasks
 
-    # Increment tasks completed
-    user_profile.tasks_completed_today += 1
+    # ✅ Save Updates
     user_profile.save()
 
-    return JsonResponse({"message": f"Task completed successfully! You earned {reward} KES.", "balance": user_profile.balance}, status=200)
+    return JsonResponse({
+        "message": f"Task completed successfully! You earned {reward} KES.",
+        "balance": user_profile.balance,
+        "todays_income": user_profile.daily_income,
+        "weekly_income": user_profile.weekly_income,
+        "monthly_income": user_profile.monthly_income,
+        "total_commission": user_profile.total_commission,
+    }, status=200)
 def update_user_earnings(user, reward):
     """Update balance and income details when a user completes a task"""
     

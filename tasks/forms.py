@@ -1,26 +1,68 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
 from django.contrib.auth import get_user_model
-User = get_user_model()
-from django.contrib.auth.forms import AuthenticationForm
-import re  # Import regex module for phone number validation
-from django.contrib.auth.forms import PasswordChangeForm
 from .models import UserProfile
+import re  # Import regex module for phone number validation
+
+User = get_user_model()
 
 class UserUpdateForm(forms.ModelForm):
+    first_name = forms.CharField(
+        max_length=100, required=False, label="First Name",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    last_name = forms.CharField(
+        max_length=100, required=False, label="Last Name",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+
     class Meta:
         model = User
-        fields = ['username']
+        fields = ['first_name', 'last_name']
 
 class ProfileUpdateForm(forms.ModelForm):
+    phone_number = forms.CharField(
+        max_length=15, required=True, label="Phone Number",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter phone number'})
+    )
+    
     class Meta:
         model = UserProfile
         fields = ['phone_number', 'profile_picture']
+
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data['phone_number']
+        
+        # Ensure the phone number is exactly 10 digits and contains only numbers
+        if not re.fullmatch(r'^\d{10}$', phone_number):
+            raise forms.ValidationError("Phone number must be exactly 10 digits.")
+        
+        return phone_number
+
+class UserProfileUpdateForm(forms.ModelForm):
+    first_name = forms.CharField(max_length=100, required=False, label="First Name")
+    last_name = forms.CharField(max_length=100, required=False, label="Last Name")
+    phone_number = forms.CharField(max_length=15, required=False, label="Phone Number")
+    
+    class Meta:
+        model = UserProfile
+        fields = ['phone_number']
+
+    def save(self, commit=True):
+        user_profile = super().save(commit=False)
+        user = user_profile.user
+        user.first_name = self.cleaned_data["first_name"]
+        user.last_name = self.cleaned_data["last_name"]
+        user.save()
+        if commit:
+            user_profile.save()
+        return user_profile
 
 class CustomPasswordChangeForm(PasswordChangeForm):
     old_password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
     new_password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
     new_password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+
 class RegistrationForm(UserCreationForm):
     first_name = forms.CharField(
         max_length=30, required=True, label="First Name",
@@ -77,6 +119,7 @@ class RegistrationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
 class LoginForm(AuthenticationForm):
     username = forms.CharField(
         max_length=10, min_length=10, required=True, label="Phone Number",

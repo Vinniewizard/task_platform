@@ -85,6 +85,13 @@ class UserProfile(models.Model):
     weekly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     monthly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
+    # ✅ New Fields for Referral & Task Updates
+    total_referrals = models.IntegerField(default=0)  # ✅ Added: Tracks total number of referrals
+    todays_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # ✅ Added
+    weekly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # ✅ Added
+    monthly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # ✅ Added
+    total_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # ✅ Added
+
     class Meta:
         verbose_name = "User Profile"
         verbose_name_plural = "User Profiles"
@@ -103,20 +110,21 @@ class UserProfile(models.Model):
         today = timezone.now().date()
         start_of_week = today - timezone.timedelta(days=today.weekday())
         start_of_month = today.replace(day=1)
+        reward = Decimal(reward)  # Convert reward to Decimal
 
-        # Update Daily Income
+        # ✅ Update Today's Income
         if task_date == today:
-            self.daily_income += reward
+            self.todays_income += reward
 
-        # Update Weekly Income
+        # ✅ Update Weekly Income
         if task_date >= start_of_week:
             self.weekly_income += reward
 
-        # Update Monthly Income
+        # ✅ Update Monthly Income
         if task_date >= start_of_month:
             self.monthly_income += reward
 
-        # Update Total Commission
+        # ✅ Update Total Commission
         self.total_commission += reward
 
         self.save()  # Save the updated values
@@ -126,6 +134,7 @@ class UserProfile(models.Model):
         if self.plan and self.plan.id == 6 and self.total_withdrawn >= 4.00:
             self.referral_restricted = True
             self.save()
+
 
 
 class Plan(models.Model):
