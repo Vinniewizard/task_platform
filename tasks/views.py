@@ -62,7 +62,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.urls import reverse  # Import reverse to generate URLs
 from django.utils.html import format_html
-
+#great 
 
 @shared_task
 def reset_daily_counters():
