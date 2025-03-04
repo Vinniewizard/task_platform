@@ -8,6 +8,13 @@
 </head>
 <body>
 
+    {% if user.userprofile.referral_restricted %}
+    <div class="alert alert-danger">
+        You have reached your withdrawal limit. To continue earning, invite a new user who upgrades to Plan 4 or above.
+    </div>
+{% endif %}
+
+
     {% if user.userprofile.tasks_completed_today %}
     <p style="color: red;">You have completed today's tasks. Come back after midnight or upgrade your plan.</p>
 {% else %}

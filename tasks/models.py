@@ -53,8 +53,10 @@ class UserProfile(models.Model):
     country = models.CharField(max_length=100, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
     referral_count = models.IntegerField(default=0)
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    tasks_completed_today = models.IntegerField(default=0)  # Track daily completed tasks
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Ensured 0.00 default
+    tasks_completed_today = models.IntegerField(default=0)
+    total_withdrawn = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    referral_restricted = models.BooleanField(default=False)  # ✅ Fixed default value
 
     # ✅ Referral System Fields
     referral_code = models.CharField(max_length=10, unique=True, blank=True, null=True)
@@ -76,12 +78,12 @@ class UserProfile(models.Model):
     plan_activation_date = models.DateField(null=True, blank=True)
 
     # ✅ Earnings & Commissions
-    total_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     # ✅ New Fields for Income Tracking
-    daily_income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    weekly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    monthly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    daily_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    weekly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    monthly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     class Meta:
         verbose_name = "User Profile"
@@ -118,6 +120,12 @@ class UserProfile(models.Model):
         self.total_commission += reward
 
         self.save()  # Save the updated values
+
+    def check_withdrawal_limit(self):
+        """Check if the user has reached the withdrawal limit and apply restriction"""
+        if self.plan and self.plan.id == 6 and self.total_withdrawn >= 4.00:
+            self.referral_restricted = True
+            self.save()
 
 
 class Plan(models.Model):

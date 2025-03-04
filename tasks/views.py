@@ -439,13 +439,13 @@ def deposit(request):
 def withdrawal(request):
     """
     Processes a withdrawal request with a minimum amount of $2.
+    If a user reaches the withdrawal limit, they must invite a user who upgrades to Plan 4+ to continue withdrawing.
     """
     user_profile = request.user.userprofile  # Get the user's profile
 
     if request.method == 'POST':
         try:
             amount_str = request.POST.get("amount", "").strip()  # Ensure no empty values
-            print(f"Raw input amount: '{amount_str}'")  # Debugging output
 
             if not amount_str:
                 messages.error(request, "Please enter a withdrawal amount.")
@@ -453,7 +453,6 @@ def withdrawal(request):
 
             try:
                 amount = Decimal(amount_str)
-                print(f"Converted Decimal amount: {amount}")  # Debugging output
             except (InvalidOperation, ValueError):
                 messages.error(request, "Invalid amount entered. Please enter a numeric value.")
                 return redirect('withdrawal')
@@ -468,7 +467,12 @@ def withdrawal(request):
                 messages.error(request, "Insufficient balance for this withdrawal.")
                 return redirect('withdrawal')
 
-            # Create withdrawal request
+            # Check if user is restricted from withdrawing
+            if user_profile.referral_restricted:
+                messages.error(request, "You must invite a new user who upgrades to Plan 4 or above to continue withdrawing.")
+                return redirect('withdrawal')
+
+            # Process withdrawal
             WithdrawalRequest.objects.create(
                 user=user_profile,
                 amount=amount,
@@ -477,7 +481,11 @@ def withdrawal(request):
 
             # Deduct amount from user balance
             user_profile.balance -= amount
+            user_profile.total_withdrawn += amount
             user_profile.save()
+
+            # Check if user reached withdrawal limit
+            user_profile.check_withdrawal_limit()
 
             messages.success(request, "Withdrawal request submitted successfully. Await admin approval.")
             return redirect('home')
@@ -487,7 +495,6 @@ def withdrawal(request):
             return redirect('home')
 
     return render(request, 'tasks/withdrawal.html', {'balance': user_profile.balance})
-
 def request_withdrawal(request):
     """
     Allows the user to request a withdrawal directly.
@@ -522,50 +529,70 @@ def choose_plan(request):
         except Plan.DoesNotExist:
             messages.error(request, "Invalid plan selected.")
             return redirect("choose_plan")
-        
+
         user_profile = request.user.userprofile
+
+        # Check if the user is already on the selected plan
         if user_profile.plan and user_profile.plan.id == plan.id:
             messages.error(request, "You are already on this plan. Please select a different plan to upgrade.")
             return redirect("choose_plan")
+
+        # Check if the user has enough balance
         if user_profile.balance < plan.activation_fee:
             messages.error(request, "Insufficient balance to activate this plan.")
             return redirect("choose_plan")
-        
+
+        # Deduct activation fee
         user_profile.balance -= plan.activation_fee
+
+        # Reset daily limits if upgrading
         if user_profile.plan:
             user_profile.mines_today = 0
             user_profile.last_mine_date = None
             user_profile.ads_watched_today = 0
             user_profile.last_ad_date = None
-        
+
+        # Assign new plan and update activation date
         user_profile.plan = plan
         user_profile.plan_activation_date = datetime.date.today()
         user_profile.save()
-        
+
+        # Handle referral system
         referral_code = request.session.get("referral_code", None)
         if referral_code:
             try:
                 inviter = UserProfile.objects.get(referral_code=referral_code)
+
+                # Award commission if the new plan is not "Trainee"
                 if plan.name.strip().lower() != "trainee":
                     inviter.balance += plan.invitation_commission
                     inviter.save()
                     logger.info(f"Commission of {plan.invitation_commission} awarded to inviter {inviter.user.username}")
+
+                    # If the inviter is restricted from withdrawals, lift the restriction
+                    if inviter.referral_restricted and plan.id >= 4:
+                        inviter.referral_restricted = False
+                        inviter.save()
+                        logger.info(f"Withdrawal restriction lifted for inviter {inviter.user.username}")
+                        messages.success(request, f"{inviter.user.username}'s withdrawal restriction has been lifted!")
+
                 else:
                     logger.info("No commission awarded because the new plan is 'trainee'")
+
             except UserProfile.DoesNotExist:
                 logger.warning("Referral code invalid; no inviter found.")
+            
+            # Remove the referral code after use
             request.session.pop("referral_code", None)
-        
+
         messages.success(request, "Plan activated/upgraded successfully! Your daily limits have been reset.")
         return redirect("home")
+
     else:
         plans = Plan.objects.all()
         user_balance = request.user.userprofile.balance
         return render(request, "tasks/choose_plan.html", {"plans": plans, "balance": user_balance})
-
-# ------------------------
-# Other Views
-# ------------------------
+    
 @login_required
 def invite(request):
     """Generates an invitation link for the user."""
