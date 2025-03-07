@@ -9,7 +9,6 @@ from django.db.models import Sum
 from datetime import date
 from django.utils import timezone
 
-
 # ---------------------------
 # CONSTANTS
 # ---------------------------

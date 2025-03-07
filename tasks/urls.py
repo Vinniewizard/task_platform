@@ -10,6 +10,7 @@ from .views import (
 from .views import reset_tasks_view  # Ensure this import is correc
 from . import views
 from .views import spin_view, spin_wheel_view
+from .views import user_settings_view
 
 #hello
 
@@ -39,6 +40,7 @@ urlpatterns = [
     path('tasks/reset-user-profile/plan/<int:plan_id>/', views.reset_user_profile, name='reset_user_profile_plan'),
     path('spin/', spin_view, name='spin_view'),
     path('spin-wheel/', spin_wheel_view, name='spin_wheel_view'),
+    path("settings/", user_settings_view, name="user_settings"),
        
     path('get_random_withdrawal/', get_random_withdrawal, name='get_random_withdrawal'),
     # Password reset paths: new password reset option

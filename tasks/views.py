@@ -64,6 +64,7 @@ from django.urls import reverse  # Import reverse to generate URLs
 from django.utils.html import format_html
 from .spinning import spin_wheel
 from django.contrib.auth.models import User  # if needed for admin adjustments
+from .forms import UserUpdateForm, ProfileUpdateForm
 
 
 
@@ -889,3 +890,30 @@ def spin_wheel_view(request):
     """
     user_profile = get_object_or_404(UserProfile, user=request.user)
     return render(request, "tasks/spin.html", {"balance": user_profile.balance})
+
+@login_required
+def user_settings_view(request):
+    user = request.user
+    user_profile, _ = UserProfile.objects.get_or_create(user=user)
+
+    if request.method == "POST":
+        user_form = UserUpdateForm(request.POST, instance=user)
+        profile_form = ProfileUpdateForm(request.POST, request.FILES, instance=user_profile)
+
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+
+            # ✅ Add success message
+            messages.success(request, "Your details have been updated successfully!")
+
+            return redirect("user_settings")  # ✅ Ensure "user_settings" is correctly named in urls.py
+
+    else:
+        user_form = UserUpdateForm(instance=user)
+        profile_form = ProfileUpdateForm(instance=user_profile)
+
+    return render(request, "tasks/user_settings.html", {
+        "user_form": user_form,
+        "profile_form": profile_form
+    })
