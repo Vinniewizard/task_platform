@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spin the Wheel</title>
+    <style>
+        .wheel-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .wheel {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 5px solid #000;
+            position: relative;
+            display: inline-block;
+        }
+        .pointer {
+            width: 10px;
+            height: 30px;
+            background-color: red;
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+    <h2>Spin the Wheel</h2>
+    <p>Your Balance: $<span id="balance">{{ balance }}</span></p>
+
+    <div class="wheel-container">
+        <div class="pointer"></div>
+        <div class="wheel">🎡</div>
+    </div>
+
+    <label for="stake">Enter your stake (min $0.50): </label>
+    <input type="number" id="stake" min="0.50" step="0.01" required>
+    <button id="spin-btn" {% if balance < 0.50 %}disabled{% endif %}>Spin</button>
+
+    <p id="result"></p>
+
+    <script>
+        document.getElementById("spin-btn").addEventListener("click", function() {
+            let stake = parseFloat(document.getElementById("stake").value);
+            let balance = parseFloat(document.getElementById("balance").innerText);
+
+            if (isNaN(stake) || stake < 0.50) {
+                document.getElementById("result").innerText = "Minimum stake is $0.50.";
+                return;
+            }
+
+            if (stake > balance) {
+                document.getElementById("result").innerText = "Insufficient balance.";
+                return;
+            }
+
+            fetch("{% url 'spin_view' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: new URLSearchParams({ stake: stake })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById("result").innerText = data.error;
+                } else {
+                    document.getElementById("result").innerHTML = `You won $${data.reward}!`;
+                    document.getElementById("balance").innerText = data.new_balance;
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        });
+    </script>
+</body>
+</html>

@@ -69,6 +69,11 @@
         <div class="col-md-4 mb-4">
           <a href="{% url 'choose_plan' %}" class="btn btn-lg btn-danger btn-block py-3 action-btn">Upgrade new plan </a>
         </div><br>
+        <div class="col-md-4 mb-4">
+         <a href="{% url 'spin_wheel_view' %}" class="btn btn-primary">Spin the Wheel</a>
+        </div><br>
+
+
     </div>
 </nav>
   <div class="container">
@@ -80,11 +85,11 @@
       {% else %}
         <!-- Virtual Apps Section -->
         <div class="apps-list" id="apps-list">
-          <h3>Virtual Apps to Download</h3>
+          <h3> Apps to Download</h3>
         </div>
         <!-- Virtual Ads Section -->
         <div class="ads-list" id="ads-list">
-          <h3>Virtual Ads to Watch</h3>
+          <h3> Ads to Watch</h3>
         </div>
         <!-- Completion Message -->
         <div id="completion-message" class="completion-message" style="display:none;">
@@ -137,8 +142,8 @@
         const adsListDiv = document.getElementById("ads-list");
 
         // Clear lists (preserve header)
-        appsListDiv.innerHTML = "<h3>Virtual Apps to Download</h3>";
-        adsListDiv.innerHTML = "<h3>Virtual Ads to Watch</h3>";
+        appsListDiv.innerHTML = "<h3> Apps to Download</h3>";
+        adsListDiv.innerHTML = "<h3> Ads to Watch</h3>";
 
         // If no tasks available, show a message and do not populate lists
         if (minesLeft <= 0) {
@@ -296,6 +301,9 @@
   <div class="col-md-4 mb-4">
           <a href="{% url 'home' %}" class="btn btn-lg btn-danger btn-block py-3 action-btn">Back to Dashboard </a>
         </div><br>
+
+
+
 
 </body>
 </html>

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<h2 style="text-align: center;">Spin the Wheel</h2>
+
+<!-- Display user's balance -->
+<div style="text-align: center; margin-bottom: 10px;">
+  <strong>Your Balance:</strong> $<span id="user-balance">{{ balance }}</span>
+</div>
+<div id="insufficient" style="display: none; text-align: center; color: red; margin-bottom: 10px;">
+  Insufficient balance to spin!
+</div>
+
+<!-- Input for stake amount -->
+<div style="text-align: center; margin-bottom: 20px;">
+  <label for="stake-input">Enter your stake (min $0.50): </label>
+  <input type="number" id="stake-input" min="0.50" step="0.01" style="width:100px;">
+</div>
+
+<!-- Spin wheel container -->
+<div id="wheel-container" style="position: relative; width: 300px; height: 300px; margin: 0 auto;">
+  <canvas id="wheelCanvas" width="300" height="300" style="border-radius: 50%;"></canvas>
+  <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%);">
+    <img id="pointer" src="{% static 'images/pointer.png' %}" alt="Pointer" width="30">
+  </div>
+</div>
+
+<button id="spin-btn" class="btn btn-primary" style="display: block; margin: 20px auto;">Spin Now</button>
+<div id="result" style="text-align: center; font-size: 1.2em; margin-top: 20px;"></div>
+
+<script>
+  let userBalance = parseFloat("{{ balance }}");
+
+  function checkBalance() {
+      let spinBtn = document.getElementById("spin-btn");
+      let insufficientMsg = document.getElementById("insufficient");
+
+      if (userBalance < 0.50) {
+          spinBtn.disabled = true;
+          insufficientMsg.style.display = "block";
+      } else {
+          spinBtn.disabled = false;
+          insufficientMsg.style.display = "none";
+      }
+  }
+  checkBalance(); // Initial check on page load
+
+  const canvas = document.getElementById("wheelCanvas");
+  const ctx = canvas.getContext("2d");
+  const radius = canvas.width / 2;
+
+  // Prize Segments
+  const segments = [
+      { label: "$0", color: "#f44336" },
+      { label: "$0.0", color: "#ff9800" },
+      { label: "Jackpot Draw", color: "#2196f3" },
+      { label: "$100", color: "#4caf50" },
+      { label: "Free Plan 10", color: "#673ab7" }
+  ];
+  const segAngle = 2 * Math.PI / segments.length;
+
+  function drawWheel(rotation = 0) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      segments.forEach((seg, i) => {
+          const startAngle = i * segAngle + rotation;
+          const endAngle = startAngle + segAngle;
+          ctx.beginPath();
+          ctx.moveTo(radius, radius);
+          ctx.arc(radius, radius, radius, startAngle, endAngle);
+          ctx.closePath();
+          ctx.fillStyle = seg.color;
+          ctx.fill();
+          ctx.save();
+          ctx.translate(radius, radius);
+          ctx.rotate(startAngle + segAngle / 2);
+          ctx.textAlign = "right";
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 14px sans-serif";
+          ctx.fillText(seg.label, radius - 10, 10);
+          ctx.restore();
+      });
+  }
+
+  drawWheel();
+
+  document.getElementById("spin-btn").addEventListener("click", function() {
+      let stakeInput = document.getElementById("stake-input");
+      let stake = parseFloat(stakeInput.value);
+      let resultDiv = document.getElementById("result");
+
+      if (isNaN(stake) || stake < 0.50) {
+          alert("Please enter a valid stake amount (minimum $0.50).");
+          return;
+      }
+
+      if (stake > userBalance) {
+          alert("Insufficient balance for this stake.");
+          return;
+      }
+
+      userBalance -= stake;
+      document.getElementById("user-balance").innerText = userBalance.toFixed(2);
+      checkBalance();
+
+      let btn = this;
+      btn.disabled = true;
+      resultDiv.innerHTML = "Spinning...";
+
+      let totalSpinDeg = Math.floor(Math.random() * 720) + 2160; // Faster spin
+      let duration = 4000; // Reduced to 4 seconds for faster experience
+      let startTime = performance.now();
+
+      function animate(currentTime) {
+          let elapsed = currentTime - startTime;
+          let progress = Math.min(elapsed / duration, 1);
+          let currentRotation = totalSpinDeg * progress;
+          drawWheel(currentRotation * Math.PI / 180);
+
+          if (progress < 1) {
+              requestAnimationFrame(animate);
+          } else {
+              let finalDeg = totalSpinDeg % 360;
+              drawWheel(finalDeg * Math.PI / 180);
+              let segmentDeg = 360 / segments.length;
+              let winningIndex = Math.floor((360 - finalDeg) / segmentDeg) % segments.length;
+              
+              // **Controlled Winning Logic**
+              let reward;
+              if (Math.random() < 0.8) { 
+                  reward = "0";  // 80% chance to win $0.1
+              } else {
+                  reward = "$0";  // 20% chance to win $0
+              }
+
+              resultDiv.innerHTML = "You won " + reward + "!";
+
+              let formData = new FormData();
+              formData.append("stake", stake);
+              formData.append("reward", reward);
+
+              fetch("{% url 'spin_view' %}", {
+                  method: "POST",
+                  body: formData,
+                  headers: { "X-CSRFToken": "{{ csrf_token }}" }
+              })
+              .then(response => response.json())
+              .then(data => {
+                  if (data.error) {
+                      alert(data.error);
+                      resultDiv.innerHTML = "Error: " + data.error;
+                      return;
+                  }
+
+                  resultDiv.innerHTML += "<br>New Balance: $" + data.new_balance;
+                  userBalance = parseFloat(data.new_balance);
+                  document.getElementById("user-balance").innerText = userBalance.toFixed(2);
+                  checkBalance();
+              })
+              .catch(error => {
+                  resultDiv.innerHTML = "Error occurred. Please try again.";
+              })
+              .finally(() => {
+                  btn.disabled = false;
+              });
+          }
+      }
+      requestAnimationFrame(animate);
+  });
+</script>
+{% endblock %}

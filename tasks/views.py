@@ -62,6 +62,9 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.urls import reverse  # Import reverse to generate URLs
 from django.utils.html import format_html
+from .spinning import spin_wheel
+from django.contrib.auth.models import User  # if needed for admin adjustments
+
 
 
 @shared_task
@@ -828,3 +831,61 @@ def reset_user_profile(request, pk=None, plan_id=None):
         messages.success(request, f"✅ Reset profile for {updated_count} users under Plan {plan_id}.")
 
     return redirect(reverse('admin:tasks_userprofile_changelist'))
+
+def spin_wheel():
+    """
+    Simulates spinning the wheel and includes 'Win Plan 6' as a possible outcome.
+    """
+    outcomes = [Decimal("0.0"), Decimal("0.1"), Decimal("0.2"), "Win Plan 6"]
+    return random.choice(outcomes)
+
+@login_required
+def spin_view(request):
+    """
+    Handles the spin action. Deducts the stake from the user's balance,
+    processes the spin result, and updates balance accordingly.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+
+    user_profile = get_object_or_404(UserProfile, user=request.user)
+    stake = request.POST.get("stake")
+
+    try:
+        stake = Decimal(stake)
+        if stake < Decimal("0.50"):
+            return JsonResponse({"error": "Minimum stake is $0.50"}, status=400)
+        if user_profile.balance < stake:
+            return JsonResponse({"error": "Insufficient balance"}, status=400)
+    except (ValueError, TypeError):
+        return JsonResponse({"error": "Invalid stake amount"}, status=400)
+
+    with transaction.atomic():
+        # Spin the wheel
+        reward = spin_wheel()
+
+        if isinstance(reward, Decimal):  # If the reward is a number
+            user_profile.balance += reward  # Add reward to balance
+            message = f"You won ${reward}!"
+        elif reward == "Win Plan 6":
+            message = "Congratulations! You won Plan 6!"
+        else:
+            message = "You won $0, try again only."
+
+        # Deduct stake
+        user_profile.balance -= stake
+        user_profile.save()
+
+    return JsonResponse({
+        "reward": str(reward),
+        "message": message,
+        "new_balance": str(user_profile.balance)
+    })
+
+@login_required
+def spin_wheel_view(request):
+    """
+    Renders the spinning wheel page where users can enter a stake and spin.
+    """
+    user_profile = get_object_or_404(UserProfile, user=request.user)
+    return render(request, "tasks/spin.html", {"balance": user_profile.balance})

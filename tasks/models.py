@@ -135,7 +135,29 @@ class UserProfile(models.Model):
             self.referral_restricted = True
             self.save()
 
+    # --- New Fields and Methods for the Spinning Wheel Feature ---
+    spin_count = models.IntegerField(default=0)  # Number of times the user has spun the wheel
+    last_spin_result = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Outcome of the last spin
+    total_spin_winnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Total winnings from spins
 
+    def update_spin(self, spin_reward):
+        """
+        Update spinning statistics.
+        If spin_reward is positive, add it to the user's balance and total_spin_winnings.
+        If negative, deduct the appropriate amount from the user's balance.
+        """
+        spin_reward = Decimal(spin_reward)  # Ensure spin_reward is a Decimal
+        self.spin_count += 1
+        self.last_spin_result = spin_reward
+
+        if spin_reward > 0:
+            self.balance += spin_reward
+            self.total_spin_winnings += spin_reward
+        else:
+            # For loss, deduct spin_reward (which is negative) from balance.
+            self.balance += spin_reward  # Since spin_reward is negative, this deducts from balance
+
+        self.save()
 
 class Plan(models.Model):
     name = models.CharField(max_length=100)

@@ -9,8 +9,9 @@ from .views import (
 )
 from .views import reset_tasks_view  # Ensure this import is correc
 from . import views
+from .views import spin_view, spin_wheel_view
 
-
+#hello
 
 urlpatterns = [
     path('home/', home, name='home'),
@@ -36,12 +37,13 @@ urlpatterns = [
     path("reset_tasks/", reset_tasks_view, name="reset_tasks"),
     path('tasks/reset-user-profile/<int:pk>/', views.reset_user_profile, name='reset_user_profile'),
     path('tasks/reset-user-profile/plan/<int:plan_id>/', views.reset_user_profile, name='reset_user_profile_plan'),
-
-
+    path('spin/', spin_view, name='spin_view'),
+    path('spin-wheel/', spin_wheel_view, name='spin_wheel_view'),
+       
     path('get_random_withdrawal/', get_random_withdrawal, name='get_random_withdrawal'),
-    # Password reset paths:
-    path('password-reset/', auth_views.PasswordResetView.as_view(template_name='password_reset.html'), name='password_reset'),
-    path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='password_reset_done.html'), name='password_reset_done'),
-    path('password-reset-confirm/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='password_reset_confirm.html'), name='password_reset_confirm'),
-    path('password-reset-complete/', auth_views.PasswordResetCompleteView.as_view(template_name='password_reset_complete.html'), name='password_reset_complete'),
+    # Password reset paths: new password reset option
+    path("password-reset/", auth_views.PasswordResetView.as_view(), name="password_reset"),
+    path("password-reset/done/", auth_views.PasswordResetDoneView.as_view(), name="password_reset_done"),
+    path("password-reset-confirm/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
+    path("password-reset-complete/", auth_views.PasswordResetCompleteView.as_view(), name="password_reset_complete"),
 ]

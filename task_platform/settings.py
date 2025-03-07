@@ -36,7 +36,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://vintech-technologies.up.railway.app",
     "https://vintech-technologies.up.railway.app",  # Add both HTTPS and HTTP just in case
 ]
-
+#hello mr 
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -174,3 +174,11 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "lucasantiago818@gmail.com"  # Change to your email
+EMAIL_HOST_PASSWORD = "rcaiohqtrogkqsnx"  # Use an App Password if using Gmail
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  # Default sender email
