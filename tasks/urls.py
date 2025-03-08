@@ -12,6 +12,7 @@ from . import views
 from .views import spin_view, spin_wheel_view
 from .views import user_settings_view
 
+
 #hello
 
 urlpatterns = [
@@ -41,6 +42,7 @@ urlpatterns = [
     path('spin/', spin_view, name='spin_view'),
     path('spin-wheel/', spin_wheel_view, name='spin_wheel_view'),
     path("settings/", user_settings_view, name="user_settings"),
+    path('dashboard/', views.dashboard, name='dashboard'),
        
     path('get_random_withdrawal/', get_random_withdrawal, name='get_random_withdrawal'),
     # Password reset paths: new password reset option

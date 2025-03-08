@@ -52,16 +52,19 @@ class UserProfile(models.Model):
     country = models.CharField(max_length=100, blank=True, null=True)
     otp_verified = models.BooleanField(default=False)
     referral_count = models.IntegerField(default=0)
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Ensured 0.00 default
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     tasks_completed_today = models.IntegerField(default=0)
     total_withdrawn = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    referral_restricted = models.BooleanField(default=False)  # ✅ Fixed default value
+    referral_restricted = models.BooleanField(default=False)
+
+    # ✅ Ensure referral_earnings has a default value
+    referral_earnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, null=False)
 
     # ✅ Referral System Fields
     referral_code = models.CharField(max_length=10, unique=True, blank=True, null=True)
     referred_by = models.ForeignKey(
         'self', null=True, blank=True, on_delete=models.SET_NULL, related_name="referred_users"
-    )  # Tracks who referred the user
+    )
 
     wallet_address = models.CharField(max_length=255, null=True, blank=True)
 
@@ -76,20 +79,20 @@ class UserProfile(models.Model):
     last_ad_date = models.DateField(null=True, blank=True)
     plan_activation_date = models.DateField(null=True, blank=True)
 
-    # ✅ Earnings & Commissions
-    total_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    # ✅ Earnings & Commissions (Ensure defaults)
+    total_commission = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    daily_income = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    weekly_income = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    monthly_income = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    todays_income = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
 
-    # ✅ New Fields for Income Tracking
-    daily_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    weekly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    monthly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    # ✅ Referral & Task Updates
+    total_referrals = models.IntegerField(default=0)
 
-    # ✅ New Fields for Referral & Task Updates
-    total_referrals = models.IntegerField(default=0)  # ✅ Added: Tracks total number of referrals
-    todays_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # ✅ Added
-    weekly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # ✅ Added
-    monthly_income = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # ✅ Added
-    total_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # ✅ Added
+    # ✅ Spinning Wheel Feature
+    spin_count = models.IntegerField(default=0)
+    last_spin_result = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    total_spin_winnings = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
 
     class Meta:
         verbose_name = "User Profile"
@@ -98,7 +101,7 @@ class UserProfile(models.Model):
     def save(self, *args, **kwargs):
         """ Generate a referral code if the user doesn't have one """
         if not self.referral_code:
-            self.referral_code = str(uuid.uuid4().hex[:8]).upper()  # Generate unique referral code
+            self.referral_code = str(uuid.uuid4().hex[:8]).upper()
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -109,24 +112,17 @@ class UserProfile(models.Model):
         today = timezone.now().date()
         start_of_week = today - timezone.timedelta(days=today.weekday())
         start_of_month = today.replace(day=1)
-        reward = Decimal(reward)  # Convert reward to Decimal
+        reward = Decimal(reward)
 
-        # ✅ Update Today's Income
         if task_date == today:
             self.todays_income += reward
-
-        # ✅ Update Weekly Income
         if task_date >= start_of_week:
             self.weekly_income += reward
-
-        # ✅ Update Monthly Income
         if task_date >= start_of_month:
             self.monthly_income += reward
 
-        # ✅ Update Total Commission
         self.total_commission += reward
-
-        self.save()  # Save the updated values
+        self.save()
 
     def check_withdrawal_limit(self):
         """Check if the user has reached the withdrawal limit and apply restriction"""
@@ -134,18 +130,18 @@ class UserProfile(models.Model):
             self.referral_restricted = True
             self.save()
 
-    # --- New Fields and Methods for the Spinning Wheel Feature ---
-    spin_count = models.IntegerField(default=0)  # Number of times the user has spun the wheel
-    last_spin_result = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Outcome of the last spin
-    total_spin_winnings = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Total winnings from spins
+    def increase_referral_earnings(self, amount):
+        """Increases referral earnings when a referral deposits or logs in."""
+        self.referral_earnings += Decimal(amount)
+        self.save()
+
+    def count_referrals(self):
+        """Returns the number of users referred by this user."""
+        return self.referred_users.count()
 
     def update_spin(self, spin_reward):
-        """
-        Update spinning statistics.
-        If spin_reward is positive, add it to the user's balance and total_spin_winnings.
-        If negative, deduct the appropriate amount from the user's balance.
-        """
-        spin_reward = Decimal(spin_reward)  # Ensure spin_reward is a Decimal
+        """ Update spinning statistics. """
+        spin_reward = Decimal(spin_reward)
         self.spin_count += 1
         self.last_spin_result = spin_reward
 
@@ -153,8 +149,7 @@ class UserProfile(models.Model):
             self.balance += spin_reward
             self.total_spin_winnings += spin_reward
         else:
-            # For loss, deduct spin_reward (which is negative) from balance.
-            self.balance += spin_reward  # Since spin_reward is negative, this deducts from balance
+            self.balance += spin_reward
 
         self.save()
 
@@ -170,11 +165,6 @@ class Plan(models.Model):
 
     def __str__(self):
         return self.name
-
-
-# ---------------------------
-# TASKS & TRANSACTIONS
-# ---------------------------
 class Task(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     reward = models.DecimalField(max_digits=10, decimal_places=2)

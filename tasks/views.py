@@ -65,7 +65,8 @@ from django.utils.html import format_html
 from .spinning import spin_wheel
 from django.contrib.auth.models import User  # if needed for admin adjustments
 from .forms import UserUpdateForm, ProfileUpdateForm
-
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
 
 
 @shared_task
@@ -192,12 +193,15 @@ def register(request):
 
                             # ✅ **Increase referrer’s referral count**
                             referrer.referral_count += 1
+                            referrer.total_referrals += 1  # ✅ **Track total referrals**
                             referrer.save()
 
                             # ✅ **Reward referrer if they have an active plan**
                             if referrer.plan:
                                 referral_bonus = referrer.plan.invitation_commission or 0
                                 referrer.balance += referral_bonus
+                                referrer.referral_earnings += referral_bonus  # ✅ **Track referral earnings**
+                                referrer.total_commission += referral_bonus  # ✅ **Increase total commission**
                                 referrer.save()
 
                                 messages.success(request, f"🎉 You have earned ${referral_bonus} for inviting {phone_number}!")
@@ -225,6 +229,15 @@ def register(request):
         form = RegistrationForm()
 
     return render(request, "tasks/register.html", {"form": form})
+
+
+@receiver(user_logged_in)
+def reward_referrer(sender, request, user, **kwargs):
+    profile = UserProfile.objects.get(user=user)
+    if profile.referred_by:
+        referrer_profile = UserProfile.objects.get(user=profile.referred_by)
+        referrer_profile.referral_earnings += 2.00  # Example reward
+        referrer_profile.save()
 
 def login_view(request):
     """Handles user login."""
@@ -917,3 +930,7 @@ def user_settings_view(request):
         "user_form": user_form,
         "profile_form": profile_form
     })
+
+@login_required
+def dashboard(request):
+    return render(request, 'tasks/dashboard.html')
