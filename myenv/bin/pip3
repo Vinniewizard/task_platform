@@ -1,4 +1,4 @@
-#!/home/wizard/Desktop/Project/MY~PROJECTS/Simple2/task_platform/myenv/bin/python
+#!/home/wizard/Desktop/Project/task_platform/myenv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
