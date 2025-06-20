@@ -1,14 +1,14 @@
 # Use official Python image
 FROM python:3.12-slim
 
-# Set working directory in the container
+# Set working directory
 WORKDIR /app
 
-# Install required system packages
+# Install system dependencies (note: replaced libmysqlclient-dev)
 RUN apt-get update && apt-get install -y \
     gcc \
-    libmysqlclient-dev \
-    default-libmysqlclient-dev \
+    libmariadb-dev \
+    libmariadb-dev-compat \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
@@ -16,15 +16,15 @@ RUN apt-get update && apt-get install -y \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy all project files
+# Copy project files
 COPY . /app
 
-# Upgrade pip and install dependencies
+# Upgrade pip and install Python dependencies
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-# Expose default Django port
+# Expose Django's default port
 EXPOSE 8000
 
-# Run the application with Gunicorn
+# Run the Django app with Gunicorn
 CMD ["gunicorn", "task_platform.wsgi:application", "--bind", "0.0.0.0:8000"]
